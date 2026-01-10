@@ -155,8 +155,8 @@ export function ShiftingGradient(props: { class?: string }) {
     palette: [] as RGB[],
   })
 
-  const isCrisp = () => theme.gradientMode() === "crisp"
-  const isRelative = () => theme.gradientColor() === "relative"
+  const isCrisp = () => theme.activeGradientMode() === "crisp"
+  const isRelative = () => theme.activeGradientColor() === "relative"
 
   onMount(() => {
     const palette = readPalette(theme.mode(), isRelative())
@@ -167,7 +167,13 @@ export function ShiftingGradient(props: { class?: string }) {
 
   createEffect(
     on(
-      () => [theme.themeId(), theme.mode(), theme.gradientMode(), theme.gradientColor(), theme.previewThemeId()],
+      () => [
+        theme.themeId(),
+        theme.mode(),
+        theme.activeGradientMode(),
+        theme.activeGradientColor(),
+        theme.previewThemeId(),
+      ],
       () => {
         const palette = readPalette(theme.mode(), isRelative())
         setStore("palette", palette)

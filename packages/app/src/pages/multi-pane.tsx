@@ -158,7 +158,7 @@ function MultiPaneContent() {
   const dragOverlayBackground = "hsl(from var(--background-base) h s l / 0.7)"
   const overlayBackground = "hsl(from var(--background-base) h s l / 0.6)"
 
-  const isCrisp = () => theme.gradientMode() === "crisp"
+  const isCrisp = () => theme.activeGradientMode() === "crisp"
   const backdropStyle = (): JSX.CSSProperties => {
     const blur = isCrisp() ? "blur(4px)" : "blur(24px) saturate(1.05)"
     return {

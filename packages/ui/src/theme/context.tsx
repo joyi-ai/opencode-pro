@@ -83,6 +83,8 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       gradientColor: "strong" as GradientColor,
       previewThemeId: null as string | null,
       previewScheme: null as ColorScheme | null,
+      previewGradientMode: null as GradientMode | null,
+      previewGradientColor: null as GradientColor | null,
     })
 
     onMount(() => {
@@ -121,11 +123,18 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     })
 
     createEffect(() => {
+      if (store.previewThemeId || store.previewScheme) return
       const theme = store.themes[store.themeId]
       if (theme) {
         applyThemeCss(theme, store.themeId, store.mode)
       }
     })
+
+    const resolvePreviewMode = (scheme: ColorScheme | null) => {
+      if (!scheme) return store.mode
+      if (scheme === "system") return getSystemMode()
+      return scheme
+    }
 
     const setTheme = (id: string) => {
       const theme = store.themes[id]
@@ -146,11 +155,13 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
 
     const setGradientMode = (mode: GradientMode) => {
       setStore("gradientMode", mode)
+      setStore("previewGradientMode", null)
       localStorage.setItem(STORAGE_KEYS.GRADIENT_MODE, mode)
     }
 
     const setGradientColor = (color: GradientColor) => {
       setStore("gradientColor", color)
+      setStore("previewGradientColor", null)
       localStorage.setItem(STORAGE_KEYS.GRADIENT_COLOR, color)
     }
 
@@ -160,6 +171,8 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       mode: () => store.mode,
       gradientMode: () => store.gradientMode,
       gradientColor: () => store.gradientColor,
+      activeGradientMode: () => store.previewGradientMode ?? store.gradientMode,
+      activeGradientColor: () => store.previewGradientColor ?? store.gradientColor,
       previewThemeId: () => store.previewThemeId,
       themes: () => store.themes,
       setTheme,
@@ -170,23 +183,31 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       previewTheme: (id: string) => {
         const theme = store.themes[id]
         if (!theme) return
-        setStore("previewThemeId", id)
-        const previewMode = store.previewScheme
-          ? store.previewScheme === "system"
-            ? getSystemMode()
-            : store.previewScheme
-          : store.mode
+        const previewMode = resolvePreviewMode(store.previewScheme)
         applyThemeCss(theme, id, previewMode)
+        setStore("previewThemeId", id)
       },
       previewColorScheme: (scheme: ColorScheme) => {
-        setStore("previewScheme", scheme)
         const previewMode = scheme === "system" ? getSystemMode() : scheme
         const id = store.previewThemeId ?? store.themeId
         const theme = store.themes[id]
         if (theme) {
           applyThemeCss(theme, id, previewMode)
         }
+        setStore("previewScheme", scheme)
       },
+      previewGradientMode: (mode: GradientMode) => setStore("previewGradientMode", mode),
+      previewGradientColor: (color: GradientColor) => setStore("previewGradientColor", color),
+      cancelThemePreview: () => {
+        const theme = store.themes[store.themeId]
+        if (theme) {
+          const previewMode = resolvePreviewMode(store.previewScheme)
+          applyThemeCss(theme, store.themeId, previewMode)
+        }
+        setStore("previewThemeId", null)
+      },
+      cancelGradientModePreview: () => setStore("previewGradientMode", null),
+      cancelGradientColorPreview: () => setStore("previewGradientColor", null),
       commitPreview: () => {
         if (store.previewThemeId) {
           setTheme(store.previewThemeId)
@@ -194,16 +215,26 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
         if (store.previewScheme) {
           setColorScheme(store.previewScheme)
         }
+        if (store.previewGradientMode) {
+          setGradientMode(store.previewGradientMode)
+        }
+        if (store.previewGradientColor) {
+          setGradientColor(store.previewGradientColor)
+        }
         setStore("previewThemeId", null)
         setStore("previewScheme", null)
+        setStore("previewGradientMode", null)
+        setStore("previewGradientColor", null)
       },
       cancelPreview: () => {
-        setStore("previewThemeId", null)
-        setStore("previewScheme", null)
         const theme = store.themes[store.themeId]
         if (theme) {
           applyThemeCss(theme, store.themeId, store.mode)
         }
+        setStore("previewThemeId", null)
+        setStore("previewScheme", null)
+        setStore("previewGradientMode", null)
+        setStore("previewGradientColor", null)
       },
     }
   },

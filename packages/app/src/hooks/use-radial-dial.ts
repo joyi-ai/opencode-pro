@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, batch, type Accessor } from "solid-js"
 
-export type RadialDialAction = "new" | "close" | "clone" | "focus"
+export type RadialDialAction = "new" | "close" | "clone" | "expand"
 
 export interface UseRadialDialOptions {
   holdDelay?: number
@@ -30,11 +30,11 @@ function angleToAction(angle: number): RadialDialAction {
   // Top-right: 0-90 degrees → "new"
   // Bottom-right: 90-180 degrees → "clone"
   // Bottom-left: 180-270 degrees → "close"
-  // Top-left: 270-360 degrees → "focus"
+  // Top-left: 270-360 degrees → "expand"
   if (normalized >= 0 && normalized < 90) return "new"
   if (normalized >= 90 && normalized < 180) return "clone"
   if (normalized >= 180 && normalized < 270) return "close"
-  return "focus"
+  return "expand"
 }
 
 export function useRadialDial(options: UseRadialDialOptions): UseRadialDialReturn {

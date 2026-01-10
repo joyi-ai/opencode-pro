@@ -24,6 +24,7 @@ export function PaneGrid(props: PaneGridProps) {
   const paneRefs = new Map<string, HTMLDivElement>()
   const paneBodyRefs = new Map<string, HTMLDivElement>()
   const paneAnimations = new Map<string, Animation>()
+  const maximizeAnimations = new Map<string, Animation>()
   let previousRects = new Map<string, DOMRect>()
   let disposed = false
   let resizeCleanup: (() => void) | null = null
@@ -50,7 +51,7 @@ export function PaneGrid(props: PaneGridProps) {
             multiPane.clonePane(focusedId)
           }
           break
-        case "focus":
+        case "expand":
           if (focusedId) {
             multiPane.toggleMaximize(focusedId)
           }
@@ -64,13 +65,17 @@ export function PaneGrid(props: PaneGridProps) {
     resizeCleanup?.()
     if (pendingFrame) cancelAnimationFrame(pendingFrame)
     for (const anim of paneAnimations.values()) anim.cancel()
+    for (const anim of maximizeAnimations.values()) anim.cancel()
     paneRefs.clear()
     paneBodyRefs.clear()
     paneAnimations.clear()
+    maximizeAnimations.clear()
     previousRects.clear()
   })
 
   function restorePaneBody(id: string) {
+    const maxId = maximizedPaneId()
+    if (maxId && id === maxId) return
     const body = paneBodyRefs.get(id)
     if (!body) return
     const slot = paneRefs.get(id)
@@ -110,9 +115,99 @@ export function PaneGrid(props: PaneGridProps) {
     }
   }
 
+  function animateMaximizedPane(id: string, direction: "expand" | "collapse") {
+    if (!containerRef) return
+    if (!overlayRef) return
+    const body = paneBodyRefs.get(id)
+    const slot = paneRefs.get(id)
+    if (!body || !slot) return
+
+    const containerRect = containerRef.getBoundingClientRect()
+    const slotRect = slot.getBoundingClientRect()
+    const slotLeft = slotRect.left - containerRect.left
+    const slotTop = slotRect.top - containerRect.top
+    const fullLeft = 0
+    const fullTop = 0
+    const fullWidth = containerRect.width
+    const fullHeight = containerRect.height
+
+    const from =
+      direction === "expand"
+        ? { left: slotLeft, top: slotTop, width: slotRect.width, height: slotRect.height }
+        : { left: fullLeft, top: fullTop, width: fullWidth, height: fullHeight }
+    const to =
+      direction === "expand"
+        ? { left: fullLeft, top: fullTop, width: fullWidth, height: fullHeight }
+        : { left: slotLeft, top: slotTop, width: slotRect.width, height: slotRect.height }
+
+    maximizeAnimations.get(id)?.cancel()
+    maximizeAnimations.delete(id)
+    paneAnimations.get(id)?.cancel()
+    paneAnimations.delete(id)
+
+    overlayRef.appendChild(body)
+    body.style.position = "absolute"
+    body.style.left = `${from.left}px`
+    body.style.top = `${from.top}px`
+    body.style.width = `${from.width}px`
+    body.style.height = `${from.height}px`
+    body.style.pointerEvents = "auto"
+
+    const anim = body.animate(
+      [
+        {
+          left: `${from.left}px`,
+          top: `${from.top}px`,
+          width: `${from.width}px`,
+          height: `${from.height}px`,
+        },
+        {
+          left: `${to.left}px`,
+          top: `${to.top}px`,
+          width: `${to.width}px`,
+          height: `${to.height}px`,
+        },
+      ],
+      { duration: FLIP_DURATION, easing: "ease-out" },
+    )
+    maximizeAnimations.set(id, anim)
+    anim.finished.then(
+      () => {
+        if (disposed) return
+        if (maximizeAnimations.get(id) !== anim) return
+        maximizeAnimations.delete(id)
+        if (direction === "collapse") {
+          restorePaneBody(id)
+          return
+        }
+        body.style.left = `${to.left}px`
+        body.style.top = `${to.top}px`
+        body.style.width = `${to.width}px`
+        body.style.height = `${to.height}px`
+      },
+      () => {},
+    )
+  }
+
+  const [lastMaximized, setLastMaximized] = createSignal<string | null>(null)
+
+  createEffect(() => {
+    const nextMax = maximizedPaneId()
+    const prevMax = untrack(() => lastMaximized())
+    if (nextMax === prevMax) return
+
+    untrack(() => setLastMaximized(nextMax ?? null))
+
+    if (prevMax && !nextMax) {
+      animateMaximizedPane(prevMax, "collapse")
+    }
+    if (nextMax) {
+      animateMaximizedPane(nextMax, "expand")
+    }
+  })
+
   // Watch for pane changes and animate
   createEffect(() => {
-    maximizedPaneId()
     const currentIds = props.panes.map((p) => p.id)
     const prevIds = untrack(() => paneIds())
     const currentPage = multiPane.currentPage()
@@ -188,8 +283,10 @@ export function PaneGrid(props: PaneGridProps) {
       pruneOverlay(currentIdSet)
       const containerRect = containerRef.getBoundingClientRect()
       const prevIdSet = new Set(prevIds)
+      const maxId = untrack(() => maximizedPaneId())
 
       for (const [id, el] of paneRefs) {
+        if (maxId && id === maxId) continue
         const body = paneBodyRefs.get(id)
         if (!body) continue
         body.dataset.paneId = id
@@ -555,14 +652,7 @@ export function PaneGrid(props: PaneGridProps) {
 
   function paneWrapperStyle(id: string, index: number) {
     const base = paneStyle(index)
-    const max = maximizedPaneId()
-    if (!max) return base
-    if (id !== max) return base
-    return {
-      position: "absolute",
-      inset: "0",
-      "z-index": "20",
-    } as const
+    return base
   }
 
   return (
@@ -615,7 +705,11 @@ export function PaneGrid(props: PaneGridProps) {
       </div>
 
       {/* Overlay layer for box-resize animations */}
-      <div ref={overlayRef} class="absolute inset-0 z-30 pointer-events-none" />
+      <div
+        ref={overlayRef}
+        class="absolute inset-0 z-30"
+        classList={{ "pointer-events-none": !maximizedPaneId() }}
+      />
 
       <Show when={!maximizedPaneId()}>
         {/* Corner resize handles */}
