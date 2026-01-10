@@ -396,7 +396,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run opencode
-        uses: anomalyco/opencode/github@latest${envStr}
+        uses: joyi-ai/opencode-pro/github@latest${envStr}
         with:
           model: ${provider}/${model}`,
             )

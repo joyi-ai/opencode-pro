@@ -7,7 +7,7 @@ export const config = {
 
   // GitHub
   github: {
-    repoUrl: "https://github.com/anomalyco/opencode",
+    repoUrl: "https://github.com/joyi-ai/opencode-pro",
     starsFormatted: {
       compact: "50K",
       full: "50,000",
