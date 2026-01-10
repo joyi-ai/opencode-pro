@@ -20,9 +20,7 @@ const InstallModeDialog: Component<{ mode: ModeDefinition; onInstalled?: () => v
   const [saving, setSaving] = createSignal(false)
   const missing = createMemo(() => local.mode.missingPlugins(props.mode))
 
-  const installHint = createMemo(() =>
-    missing().includes("oh-my-opencode") ? "bunx oh-my-opencode install" : "",
-  )
+  const installHint = createMemo(() => (missing().includes("oh-my-opencode") ? "bunx oh-my-opencode install" : ""))
 
   const handleInstall = async () => {
     if (saving()) return
@@ -96,9 +94,7 @@ export const ModeSelector: Component = () => {
     }
     if (!local.mode.isAvailable(mode)) {
       setOpen(false)
-      dialog.show(() => (
-        <InstallModeDialog mode={mode} onInstalled={() => local.mode.set(mode.id)} />
-      ))
+      dialog.show(() => <InstallModeDialog mode={mode} onInstalled={() => local.mode.set(mode.id)} />)
       return
     }
     local.mode.set(mode.id)
@@ -118,10 +114,7 @@ export const ModeSelector: Component = () => {
       class="w-80 max-h-96"
       trigger={
         <Button variant="ghost" class="gap-1.5">
-          <span
-            class="size-2 rounded-full"
-            style={{ "background-color": current()?.color ?? "#3D405B" }}
-          />
+          <span class="size-2 rounded-full" style={{ "background-color": current()?.color ?? "#3D405B" }} />
           <Icon name={(current()?.icon as any) ?? "code"} size="small" class="text-icon-info-active" />
           <span class="truncate max-w-[120px]">{current()?.name ?? "Mode"}</span>
           <Icon name="chevron-down" size="small" />
@@ -145,10 +138,7 @@ export const ModeSelector: Component = () => {
                   onClick={() => handleSelect(mode)}
                 >
                   <div class="flex items-center gap-2">
-                    <span
-                      class="size-2 rounded-full"
-                      style={{ "background-color": mode.color ?? "#3D405B" }}
-                    />
+                    <span class="size-2 rounded-full" style={{ "background-color": mode.color ?? "#3D405B" }} />
                     <Icon name={(mode.icon as any) ?? "code"} size="small" class="text-icon-info-active" />
                     <span class="text-13-medium text-text-strong">{mode.name}</span>
                     <Show when={isCurrent()}>
@@ -159,9 +149,7 @@ export const ModeSelector: Component = () => {
                     <div class="text-12-regular text-text-weak mt-0.5">{mode.description}</div>
                   </Show>
                   <Show when={missing().length > 0}>
-                    <div class="text-11-regular text-text-subtle mt-0.5">
-                      Requires {missing().join(", ")}
-                    </div>
+                    <div class="text-11-regular text-text-subtle mt-0.5">Requires {missing().join(", ")}</div>
                   </Show>
                 </button>
                 <IconButton

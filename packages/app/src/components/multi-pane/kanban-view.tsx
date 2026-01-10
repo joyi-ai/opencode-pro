@@ -111,24 +111,24 @@ function PaneColumns(props: { panes: PaneConfig[] }) {
           {(col) => {
             const active = createMemo(() => col.panes.some((pane) => pane.id === focusedPaneId()))
             return (
-            <div class="w-72 shrink-0 flex flex-col min-h-0">
-              <div class="flex items-center justify-between px-1 pb-2">
-                <div class="text-11-medium text-text-weak uppercase tracking-wide">{col.title}</div>
-                <Tooltip value="New tab" placement="bottom">
-                  <IconButton icon="plus" variant="ghost" onClick={() => addToColumn(undefined)} />
-                </Tooltip>
+              <div class="w-72 shrink-0 flex flex-col min-h-0">
+                <div class="flex items-center justify-between px-1 pb-2">
+                  <div class="text-11-medium text-text-weak uppercase tracking-wide">{col.title}</div>
+                  <Tooltip value="New tab" placement="bottom">
+                    <IconButton icon="plus" variant="ghost" onClick={() => addToColumn(undefined)} />
+                  </Tooltip>
+                </div>
+                <div
+                  class="flex-1 min-h-0 border p-2 overflow-y-auto no-scrollbar flex flex-col gap-2"
+                  classList={{
+                    "border-border-accent-base": active(),
+                    "border-border-strong-base": !active(),
+                  }}
+                >
+                  <For each={col.panes}>{(pane) => <PaneCard pane={pane} />}</For>
+                </div>
               </div>
-              <div
-                class="flex-1 min-h-0 border p-2 overflow-y-auto no-scrollbar flex flex-col gap-2"
-                classList={{
-                  "border-border-accent-base": active(),
-                  "border-border-strong-base": !active(),
-                }}
-              >
-                <For each={col.panes}>{(pane) => <PaneCard pane={pane} />}</For>
-              </div>
-            </div>
-          )
+            )
           }}
         </For>
       </div>
@@ -193,9 +193,7 @@ function PaneSidePanel() {
       <Show
         when={focused()}
         fallback={
-          <div class="flex-1 min-h-0 flex items-center justify-center text-text-weak text-12-regular">
-            Select a tab
-          </div>
+          <div class="flex-1 min-h-0 flex items-center justify-center text-text-weak text-12-regular">Select a tab</div>
         }
       >
         {(pane) => (
@@ -213,11 +211,7 @@ function PaneSidePanel() {
             {(_) => (
               <SDKProvider directory={pane().directory!}>
                 <SyncProvider>
-                  <SidePanelSynced
-                    paneId={pane().id}
-                    directory={pane().directory!}
-                    sessionId={pane().sessionId!}
-                  />
+                  <SidePanelSynced paneId={pane().id} directory={pane().directory!} sessionId={pane().sessionId!} />
                 </SyncProvider>
               </SDKProvider>
             )}

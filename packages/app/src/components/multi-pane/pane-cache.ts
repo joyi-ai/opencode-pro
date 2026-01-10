@@ -8,4 +8,3 @@ export type PaneCache = {
 }
 
 export const paneCache = new Map<string, PaneCache>()
-

@@ -50,6 +50,8 @@ export default function Page() {
   const layout = useLayout()
   const terminal = useTerminal()
   const command = useCommand()
+  const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
+  const view = createMemo(() => layout.view(sessionKey()))
 
   const [store, setStore] = createStore({
     activeTerminalDraggable: undefined as string | undefined,
@@ -61,7 +63,7 @@ export default function Page() {
 
   // Auto-create terminal when terminal panel opens
   createEffect(() => {
-    if (layout.terminal.opened()) {
+    if (view().terminal.opened()) {
       if (terminal.all().length === 0) {
         terminal.new()
       }
@@ -94,12 +96,7 @@ export default function Page() {
   return (
     <div class="relative bg-background-base size-full overflow-hidden flex flex-col">
       {/* Session Pane (single mode) */}
-      <SessionPane
-        mode="single"
-        directory={directory()}
-        sessionId={params.id}
-        promptInputRef={() => inputRef}
-      />
+      <SessionPane mode="single" directory={directory()} sessionId={params.id} promptInputRef={() => inputRef} />
 
       {/* Prompt Input - absolute positioned for mobile, relative for desktop */}
       <div class="md:hidden absolute inset-x-0 bottom-4 flex flex-col justify-center items-center z-50 px-4">
@@ -122,7 +119,7 @@ export default function Page() {
       </div>
 
       {/* Terminal Panel - External */}
-      <Show when={layout.terminal.opened()}>
+      <Show when={view().terminal.opened()}>
         <div
           class="hidden md:flex relative w-full flex-col shrink-0 border-t border-border-weak-base"
           style={{ height: `${layout.terminal.height()}px` }}
@@ -134,7 +131,7 @@ export default function Page() {
             max={window.innerHeight * 0.6}
             collapseThreshold={50}
             onResize={layout.terminal.resize}
-            onCollapse={layout.terminal.close}
+            onCollapse={view().terminal.close}
           />
           <DragDropProvider
             onDragStart={handleTerminalDragStart}

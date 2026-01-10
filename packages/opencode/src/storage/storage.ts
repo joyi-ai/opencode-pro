@@ -155,7 +155,9 @@ export namespace Storage {
         cwd: messagesDir,
         absolute: true,
       })) {
-        const message = await Bun.file(msgPath).json().catch(() => null)
+        const message = await Bun.file(msgPath)
+          .json()
+          .catch(() => null)
         if (!message) continue
 
         // Check if already migrated (has info and parts structure)
@@ -177,7 +179,9 @@ export namespace Storage {
             cwd: partsDir,
             absolute: true,
           })) {
-            const part = await Bun.file(partPath).json().catch(() => null)
+            const part = await Bun.file(partPath)
+              .json()
+              .catch(() => null)
             if (part) parts.push(part)
           }
         }

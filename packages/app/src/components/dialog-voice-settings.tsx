@@ -11,9 +11,7 @@ import { useKeybindCapture } from "@/hooks/use-keybind-capture"
 export function DialogVoiceSettings() {
   const dialog = useDialog()
   const voice = useVoice()
-  const { isCapturing, setIsCapturing, capturedKeybind, handleKeyDown } = useKeybindCapture(
-    voice.settings.keybind(),
-  )
+  const { isCapturing, setIsCapturing, capturedKeybind, handleKeyDown } = useKeybindCapture(voice.settings.keybind())
   const [selectedMode, setSelectedMode] = createSignal<RecordingMode>(voice.settings.mode())
 
   const handleSave = () => {
@@ -37,9 +35,7 @@ export function DialogVoiceSettings() {
           </div>
           <div class="flex flex-col gap-1">
             <div class="text-14-medium text-text-strong">Voice Input</div>
-            <div class="text-13-regular text-text-base">
-              Transcribe speech to text using local AI (Parakeet model).
-            </div>
+            <div class="text-13-regular text-text-base">Transcribe speech to text using local AI (Parakeet model).</div>
           </div>
         </div>
 
@@ -49,9 +45,7 @@ export function DialogVoiceSettings() {
           <Switch>
             <Match when={voice.state.modelStatus() === "not-downloaded"}>
               <div class="flex items-center gap-2">
-                <div class="flex-1 text-13-regular text-text-base">
-                  Model not downloaded (~700MB)
-                </div>
+                <div class="flex-1 text-13-regular text-text-base">Model not downloaded (~700MB)</div>
                 <Button variant="primary" size="small" onClick={handleDownload}>
                   Download
                 </Button>
@@ -99,10 +93,7 @@ export function DialogVoiceSettings() {
               onKeyDown={handleKeyDown}
               onBlur={() => setIsCapturing(false)}
             >
-              <Show
-                when={!isCapturing()}
-                fallback={<span class="text-text-subtle">Press keys...</span>}
-              >
+              <Show when={!isCapturing()} fallback={<span class="text-text-subtle">Press keys...</span>}>
                 <span class="font-mono">{formatKeybind(capturedKeybind())}</span>
               </Show>
             </button>
@@ -158,12 +149,7 @@ export function DialogVoiceSettings() {
           <Button variant="ghost" size="normal" onClick={() => dialog.close()}>
             Cancel
           </Button>
-          <Button
-            variant="primary"
-            size="normal"
-            onClick={handleSave}
-            disabled={voice.state.modelStatus() !== "ready"}
-          >
+          <Button variant="primary" size="normal" onClick={handleSave} disabled={voice.state.modelStatus() !== "ready"}>
             Save
           </Button>
         </div>

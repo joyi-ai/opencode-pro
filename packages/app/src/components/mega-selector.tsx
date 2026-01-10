@@ -24,9 +24,7 @@ const InstallModeDialog: Component<{ mode: ModeDefinition; onInstalled?: () => v
   const [saving, setSaving] = createSignal(false)
   const missing = createMemo(() => local.mode.missingPlugins(props.mode))
 
-  const installHint = createMemo(() =>
-    missing().includes("oh-my-opencode") ? "bunx oh-my-opencode install" : "",
-  )
+  const installHint = createMemo(() => (missing().includes("oh-my-opencode") ? "bunx oh-my-opencode install" : ""))
 
   const handleInstall = async () => {
     if (saving()) return
@@ -352,7 +350,11 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
                     onClick={() => setShowProviderFilter(!showProviderFilter())}
                     title="Filter by provider"
                   >
-                    <Icon name="chevron-down" size="small" classList={{ "text-icon-weak": !selectedProvider() && !showProviderFilter() }} />
+                    <Icon
+                      name="chevron-down"
+                      size="small"
+                      classList={{ "text-icon-weak": !selectedProvider() && !showProviderFilter() }}
+                    />
                   </button>
                 </div>
                 {/* Provider filter dropdown */}
@@ -374,7 +376,9 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
                         <button
                           type="button"
                           class="px-2 py-1 text-12-regular text-left rounded hover:bg-surface-raised-base-hover truncate shrink-0"
-                          classList={{ "bg-surface-raised-base-hover text-text-strong": selectedProvider() === provider.id }}
+                          classList={{
+                            "bg-surface-raised-base-hover text-text-strong": selectedProvider() === provider.id,
+                          }}
                           onClick={() => {
                             setSelectedProvider(provider.id)
                             setShowProviderFilter(false)
@@ -390,9 +394,7 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
               <Show
                 when={!isOhMyMode()}
                 fallback={
-                  <div class="px-2 py-3 text-12-regular text-text-weak text-center">
-                    Managed by Oh My OpenCode
-                  </div>
+                  <div class="px-2 py-3 text-12-regular text-text-weak text-center">Managed by Oh My OpenCode</div>
                 }
               >
                 <div class="flex flex-col gap-0.5 flex-1 overflow-y-auto">
@@ -448,9 +450,7 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
                     }}
                   </For>
                   <Show when={models().length === 0}>
-                    <div class="px-2 py-3 text-12-regular text-text-weak text-center">
-                      No models found
-                    </div>
+                    <div class="px-2 py-3 text-12-regular text-text-weak text-center">No models found</div>
                   </Show>
                 </div>
               </Show>
@@ -508,9 +508,7 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
 
                 {/* Fallback when no options available */}
                 <Show when={!hasVariants() && !isClaudeCodeMode()}>
-                  <div class="px-2 py-3 text-12-regular text-text-weak text-center">
-                    No options available
-                  </div>
+                  <div class="px-2 py-3 text-12-regular text-text-weak text-center">No options available</div>
                 </Show>
               </div>
             </div>

@@ -1855,7 +1855,9 @@ function Question(props: ToolProps<typeof QuestionTool>) {
                 <box flexDirection="row" gap={1}>
                   <text fg={theme.textMuted}>{q.question}</text>
                   <text fg={theme.text}>
-                    {props.metadata.answers?.[i()] === undefined ? "(no answer)" : format(props.metadata.answers?.[i()])}
+                    {props.metadata.answers?.[i()] === undefined
+                      ? "(no answer)"
+                      : format(props.metadata.answers?.[i()])}
                   </text>
                 </box>
               )}

@@ -92,6 +92,8 @@ export type UserMessage = {
     [key: string]: boolean
   }
   variant?: string
+  thinking?: boolean
+  claudeCodeFlow?: boolean
 }
 
 export type ProviderAuthError = {
@@ -459,6 +461,35 @@ export type EventMessagePartRemoved = {
   }
 }
 
+export type EventClaudePluginLoaded = {
+  type: "claude-plugin.loaded"
+  properties: {
+    pluginId: string
+    pluginName: string
+  }
+}
+
+export type EventClaudePluginUnloaded = {
+  type: "claude-plugin.unloaded"
+  properties: {
+    pluginId: string
+  }
+}
+
+export type EventClaudePluginEnabled = {
+  type: "claude-plugin.enabled"
+  properties: {
+    pluginId: string
+  }
+}
+
+export type EventClaudePluginDisabled = {
+  type: "claude-plugin.disabled"
+  properties: {
+    pluginId: string
+  }
+}
+
 export type PermissionRequest = {
   id: string
   sessionID: string
@@ -541,6 +572,10 @@ export type QuestionInfo = {
    * Available choices
    */
   options: Array<QuestionOption>
+  /**
+   * Allow selecting multiple choices
+   */
+  multiple?: boolean
 }
 
 export type QuestionRequest = {
@@ -561,12 +596,14 @@ export type EventQuestionAsked = {
   properties: QuestionRequest
 }
 
+export type QuestionAnswer = Array<string>
+
 export type EventQuestionReplied = {
   type: "question.replied"
   properties: {
     sessionID: string
     requestID: string
-    answers: Array<string>
+    answers: Array<QuestionAnswer>
   }
 }
 
@@ -688,6 +725,54 @@ export type EventCommandExecuted = {
   }
 }
 
+export type EventAskuserAsked = {
+  type: "askuser.asked"
+  properties: {
+    id: string
+    sessionID: string
+    messageID: string
+    callID: string
+    questions: Array<{
+      question: string
+      header: string
+      options: Array<{
+        label: string
+        description: string
+      }>
+      multiSelect: boolean
+    }>
+  }
+}
+
+export type EventAskuserReplied = {
+  type: "askuser.replied"
+  properties: {
+    requestID: string
+    answers: {
+      [key: string]: string
+    }
+  }
+}
+
+export type EventPlanmodeReview = {
+  type: "planmode.review"
+  properties: {
+    id: string
+    sessionID: string
+    messageID: string
+    callID: string
+    plan: string
+  }
+}
+
+export type EventPlanmodeResponded = {
+  type: "planmode.responded"
+  properties: {
+    requestID: string
+    approved: boolean
+  }
+}
+
 export type PermissionAction = "allow" | "deny" | "ask"
 
 export type PermissionRule = {
@@ -697,6 +782,12 @@ export type PermissionRule = {
 }
 
 export type PermissionRuleset = Array<PermissionRule>
+
+export type WorktreeInfo = {
+  path: string
+  branch: string
+  cleanup?: "ask" | "always" | "never"
+}
 
 export type Session = {
   id: string
@@ -727,6 +818,7 @@ export type Session = {
     snapshot?: string
     diff?: string
   }
+  worktree?: WorktreeInfo
 }
 
 export type EventSessionCreated = {
@@ -845,6 +937,10 @@ export type Event =
   | EventMessageRemoved
   | EventMessagePartUpdated
   | EventMessagePartRemoved
+  | EventClaudePluginLoaded
+  | EventClaudePluginUnloaded
+  | EventClaudePluginEnabled
+  | EventClaudePluginDisabled
   | EventPermissionAsked
   | EventPermissionReplied
   | EventSessionStatus
@@ -861,6 +957,10 @@ export type Event =
   | EventTuiSessionSelect
   | EventMcpToolsChanged
   | EventCommandExecuted
+  | EventAskuserAsked
+  | EventAskuserReplied
+  | EventPlanmodeReview
+  | EventPlanmodeResponded
   | EventSessionCreated
   | EventSessionUpdated
   | EventSessionDeleted
@@ -892,6 +992,90 @@ export type NotFoundError = {
   name: "NotFoundError"
   data: {
     message: string
+  }
+}
+
+export type ClaudePluginManifest = {
+  name: string
+  version: string
+  description?: string
+  author?:
+    | {
+        name: string
+        email?: string
+        url?: string
+      }
+    | string
+  homepage?: string
+  repository?: string
+  license?: string
+  keywords?: Array<string>
+  commands?: Array<string>
+  agents?: string
+  skills?: string
+  hooks?: string
+  mcpServers?: {
+    [key: string]: unknown
+  }
+  lspServers?: string
+}
+
+export type ClaudePluginLoaded = {
+  id: string
+  name: string
+  path: string
+  manifest: ClaudePluginManifest
+  commandCount: number
+  agentCount: number
+  hookCount: number
+  mcpCount: number
+  lspCount: number
+}
+
+export type ClaudePluginInstalled = {
+  id: string
+  source: "local" | "marketplace"
+  path: string
+  enabled: boolean
+  manifest: ClaudePluginManifest
+  installedAt: number
+  updatedAt?: number
+}
+
+export type ClaudePluginMarketplaceEntry = {
+  name: string
+  id?: string
+  version?: string
+  description?: string
+  author?: {
+    name: string
+    email?: string
+  }
+  source:
+    | string
+    | {
+        source: "url"
+        url: string
+      }
+  homepage?: string
+  repository?: string
+  downloads?: number
+  rating?: number
+  tags?: Array<string>
+  category?: string
+  strict?: boolean
+  lspServers?: {
+    [key: string]: {
+      command: string
+      args?: Array<string>
+      extensionToLanguage?: {
+        [key: string]: string
+      }
+      env?: {
+        [key: string]: string
+      }
+      startupTimeout?: number
+    }
   }
 }
 
@@ -1060,7 +1244,7 @@ export type KeybindsConfig = {
    */
   agent_cycle?: string
   /**
-   * Previous agent
+   * Next mode
    */
   agent_cycle_reverse?: string
   /**
@@ -1364,6 +1548,63 @@ export type AgentConfig = {
     | undefined
 }
 
+export type ModeConfig = {
+  /**
+   * Mode identifier
+   */
+  id: string
+  /**
+   * Mode display name
+   */
+  name: string
+  description?: string
+  /**
+   * Icon name for UI display
+   */
+  icon?: string
+  /**
+   * Hex color code for the mode (e.g., #FF5733)
+   */
+  color?: string
+  /**
+   * Provider override for this mode
+   */
+  provider?: string
+  /**
+   * Default agent to use in this mode
+   */
+  default_agent?: string
+  /**
+   * Allowlist of agent names for this mode
+   */
+  allowed_agents?: Array<string>
+  /**
+   * Blocklist of agent names for this mode
+   */
+  disabled_agents?: Array<string>
+  /**
+   * Plugins required for this mode
+   */
+  requires_plugins?: Array<string>
+  /**
+   * Mode-specific overrides
+   */
+  overrides?: {
+    [key: string]: unknown
+  }
+  [key: string]:
+    | unknown
+    | string
+    | string
+    | Array<string>
+    | Array<string>
+    | Array<string>
+    | {
+        [key: string]: unknown
+      }
+    | undefined
+}
+
 export type ProviderConfig = {
   api?: string
   name?: string
@@ -1577,6 +1818,19 @@ export type Config = {
   plugin?: Array<string>
   snapshot?: boolean
   /**
+   * Git worktree configuration for session isolation
+   */
+  worktree?: {
+    /**
+     * Enable git worktree isolation for sessions
+     */
+    enabled?: boolean
+    /**
+     * How to handle worktree cleanup when session is deleted
+     */
+    cleanup?: "ask" | "always" | "never"
+  }
+  /**
    * Control sharing behavior:'manual' allows manual sharing via commands, 'auto' enables automatic sharing, 'disabled' disables all sharing
    */
   share?: "manual" | "auto" | "disabled"
@@ -1632,6 +1886,12 @@ export type Config = {
     summary?: AgentConfig
     compaction?: AgentConfig
     [key: string]: AgentConfig | undefined
+  }
+  /**
+   * Mode configuration for the app UI
+   */
+  modes?: {
+    [key: string]: ModeConfig
   }
   /**
    * Custom provider configurations and model overrides
@@ -2198,6 +2458,442 @@ export type ProjectUpdateResponses = {
 
 export type ProjectUpdateResponse = ProjectUpdateResponses[keyof ProjectUpdateResponses]
 
+export type ClaudePluginListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin"
+}
+
+export type ClaudePluginListResponses = {
+  /**
+   * List of loaded plugins
+   */
+  200: Array<ClaudePluginLoaded>
+}
+
+export type ClaudePluginListResponse = ClaudePluginListResponses[keyof ClaudePluginListResponses]
+
+export type ClaudePluginInstalledData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/installed"
+}
+
+export type ClaudePluginInstalledResponses = {
+  /**
+   * List of installed plugins
+   */
+  200: Array<ClaudePluginInstalled>
+}
+
+export type ClaudePluginInstalledResponse = ClaudePluginInstalledResponses[keyof ClaudePluginInstalledResponses]
+
+export type ClaudePluginMarketplaceData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/marketplace"
+}
+
+export type ClaudePluginMarketplaceResponses = {
+  /**
+   * List of marketplace plugins
+   */
+  200: Array<ClaudePluginMarketplaceEntry>
+}
+
+export type ClaudePluginMarketplaceResponse = ClaudePluginMarketplaceResponses[keyof ClaudePluginMarketplaceResponses]
+
+export type ClaudePluginMarketplaceSearchData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    q: string
+  }
+  url: "/claude-plugin/marketplace/search"
+}
+
+export type ClaudePluginMarketplaceSearchErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ClaudePluginMarketplaceSearchError =
+  ClaudePluginMarketplaceSearchErrors[keyof ClaudePluginMarketplaceSearchErrors]
+
+export type ClaudePluginMarketplaceSearchResponses = {
+  /**
+   * Search results
+   */
+  200: Array<ClaudePluginMarketplaceEntry>
+}
+
+export type ClaudePluginMarketplaceSearchResponse =
+  ClaudePluginMarketplaceSearchResponses[keyof ClaudePluginMarketplaceSearchResponses]
+
+export type ClaudePluginInstallData = {
+  body?: {
+    id: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/install"
+}
+
+export type ClaudePluginInstallErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type ClaudePluginInstallError = ClaudePluginInstallErrors[keyof ClaudePluginInstallErrors]
+
+export type ClaudePluginInstallResponses = {
+  /**
+   * Installed plugin
+   */
+  200: ClaudePluginLoaded
+}
+
+export type ClaudePluginInstallResponse = ClaudePluginInstallResponses[keyof ClaudePluginInstallResponses]
+
+export type ClaudePluginUninstallData = {
+  body?: {
+    id: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/uninstall"
+}
+
+export type ClaudePluginUninstallErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type ClaudePluginUninstallError = ClaudePluginUninstallErrors[keyof ClaudePluginUninstallErrors]
+
+export type ClaudePluginUninstallResponses = {
+  /**
+   * Plugin uninstalled
+   */
+  200: boolean
+}
+
+export type ClaudePluginUninstallResponse = ClaudePluginUninstallResponses[keyof ClaudePluginUninstallResponses]
+
+export type ClaudePluginEnableData = {
+  body?: {
+    id: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/enable"
+}
+
+export type ClaudePluginEnableErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type ClaudePluginEnableError = ClaudePluginEnableErrors[keyof ClaudePluginEnableErrors]
+
+export type ClaudePluginEnableResponses = {
+  /**
+   * Plugin enabled
+   */
+  200: boolean
+}
+
+export type ClaudePluginEnableResponse = ClaudePluginEnableResponses[keyof ClaudePluginEnableResponses]
+
+export type ClaudePluginDisableData = {
+  body?: {
+    id: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/disable"
+}
+
+export type ClaudePluginDisableErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type ClaudePluginDisableError = ClaudePluginDisableErrors[keyof ClaudePluginDisableErrors]
+
+export type ClaudePluginDisableResponses = {
+  /**
+   * Plugin disabled
+   */
+  200: boolean
+}
+
+export type ClaudePluginDisableResponse = ClaudePluginDisableResponses[keyof ClaudePluginDisableResponses]
+
+export type ClaudePluginCommandsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/commands"
+}
+
+export type ClaudePluginCommandsResponses = {
+  /**
+   * List of commands
+   */
+  200: Array<{
+    pluginId: string
+    pluginName: string
+    name: string
+    fullName: string
+    description?: string
+  }>
+}
+
+export type ClaudePluginCommandsResponse = ClaudePluginCommandsResponses[keyof ClaudePluginCommandsResponses]
+
+export type ClaudePluginAgentsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/agents"
+}
+
+export type ClaudePluginAgentsResponses = {
+  /**
+   * List of agents
+   */
+  200: Array<{
+    pluginId: string
+    pluginName: string
+    name: string
+    fullName: string
+    description?: string
+  }>
+}
+
+export type ClaudePluginAgentsResponse = ClaudePluginAgentsResponses[keyof ClaudePluginAgentsResponses]
+
+export type ClaudePluginMarketplaceRefreshData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/marketplace/refresh"
+}
+
+export type ClaudePluginMarketplaceRefreshResponses = {
+  /**
+   * Marketplace refreshed
+   */
+  200: Array<ClaudePluginMarketplaceEntry>
+}
+
+export type ClaudePluginMarketplaceRefreshResponse =
+  ClaudePluginMarketplaceRefreshResponses[keyof ClaudePluginMarketplaceRefreshResponses]
+
+export type ClaudePluginStatsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/claude-plugin/stats"
+}
+
+export type ClaudePluginStatsResponses = {
+  /**
+   * Plugin statistics
+   */
+  200: {
+    [key: string]: {
+      name: string
+      downloads: number
+      stars: number
+      version?: string
+    }
+  }
+}
+
+export type ClaudePluginStatsResponse = ClaudePluginStatsResponses[keyof ClaudePluginStatsResponses]
+
+export type QuestionListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/question"
+}
+
+export type QuestionListResponses = {
+  /**
+   * List of pending questions
+   */
+  200: Array<QuestionRequest>
+}
+
+export type QuestionListResponse = QuestionListResponses[keyof QuestionListResponses]
+
+export type QuestionReplyData = {
+  body?: {
+    /**
+     * User answers in order of questions (each answer is an array of selected labels)
+     */
+    answers: Array<QuestionAnswer>
+  }
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/question/{requestID}/reply"
+}
+
+export type QuestionReplyErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type QuestionReplyError = QuestionReplyErrors[keyof QuestionReplyErrors]
+
+export type QuestionReplyResponses = {
+  /**
+   * Question answered successfully
+   */
+  200: boolean
+}
+
+export type QuestionReplyResponse = QuestionReplyResponses[keyof QuestionReplyResponses]
+
+export type QuestionRejectData = {
+  body?: never
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/question/{requestID}/reject"
+}
+
+export type QuestionRejectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type QuestionRejectError = QuestionRejectErrors[keyof QuestionRejectErrors]
+
+export type QuestionRejectResponses = {
+  /**
+   * Question rejected successfully
+   */
+  200: boolean
+}
+
+export type QuestionRejectResponse = QuestionRejectResponses[keyof QuestionRejectResponses]
+
+export type TuiControlNextData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/tui/control/next"
+}
+
+export type TuiControlNextResponses = {
+  /**
+   * Next TUI request
+   */
+  200: {
+    path: string
+    body: unknown
+  }
+}
+
+export type TuiControlNextResponse = TuiControlNextResponses[keyof TuiControlNextResponses]
+
+export type TuiControlResponseData = {
+  body?: unknown
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/tui/control/response"
+}
+
+export type TuiControlResponseResponses = {
+  /**
+   * Response submitted successfully
+   */
+  200: boolean
+}
+
+export type TuiControlResponseResponse = TuiControlResponseResponses[keyof TuiControlResponseResponses]
+
 export type PtyListData = {
   body?: never
   path?: never
@@ -2418,6 +3114,28 @@ export type ConfigUpdateResponses = {
 
 export type ConfigUpdateResponse = ConfigUpdateResponses[keyof ConfigUpdateResponses]
 
+export type SkillListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/skill"
+}
+
+export type SkillListResponses = {
+  /**
+   * List of skills
+   */
+  200: Array<{
+    name: string
+    description: string
+    location: string
+  }>
+}
+
+export type SkillListResponse = SkillListResponses[keyof SkillListResponses]
+
 export type ToolIdsData = {
   body?: never
   path?: never
@@ -2608,6 +3326,8 @@ export type SessionCreateData = {
     parentID?: string
     title?: string
     permission?: PermissionRuleset
+    useWorktree?: boolean
+    worktreeCleanup?: "ask" | "always" | "never"
   }
   path?: never
   query?: {
@@ -2670,6 +3390,7 @@ export type SessionDeleteData = {
   }
   query?: {
     directory?: string
+    removeWorktree?: boolean
   }
   url: "/session/{sessionID}"
 }
@@ -2803,9 +3524,6 @@ export type SessionChildrenResponse = SessionChildrenResponses[keyof SessionChil
 export type SessionTodoData = {
   body?: never
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
   }
   query?: {
@@ -2843,9 +3561,6 @@ export type SessionInitData = {
     messageID: string
   }
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
   }
   query?: {
@@ -2879,6 +3594,8 @@ export type SessionInitResponse = SessionInitResponses[keyof SessionInitResponse
 export type SessionForkData = {
   body?: {
     messageID?: string
+    useWorktree?: boolean
+    worktreeCleanup?: "ask" | "always" | "never"
   }
   path: {
     sessionID: string
@@ -2997,42 +3714,26 @@ export type SessionShareResponses = {
 
 export type SessionShareResponse = SessionShareResponses[keyof SessionShareResponses]
 
-export type SessionDiffData = {
+export type MessageDiffData = {
   body?: never
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
+    messageID?: string
   }
   query?: {
     directory?: string
-    messageID?: string
   }
-  url: "/session/{sessionID}/diff"
+  url: "/session/{sessionID}/message/{messageID}/diff"
 }
 
-export type SessionDiffErrors = {
+export type MessageDiffResponses = {
   /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type SessionDiffError = SessionDiffErrors[keyof SessionDiffErrors]
-
-export type SessionDiffResponses = {
-  /**
-   * List of diffs
+   * Successfully retrieved diff
    */
   200: Array<FileDiff>
 }
 
-export type SessionDiffResponse = SessionDiffResponses[keyof SessionDiffResponses]
+export type MessageDiffResponse = MessageDiffResponses[keyof MessageDiffResponses]
 
 export type SessionSummarizeData = {
   body?: {
@@ -3041,9 +3742,6 @@ export type SessionSummarizeData = {
     auto?: boolean
   }
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
   }
   query?: {
@@ -3077,9 +3775,6 @@ export type SessionSummarizeResponse = SessionSummarizeResponses[keyof SessionSu
 export type SessionMessagesData = {
   body?: never
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
   }
   query?: {
@@ -3131,12 +3826,11 @@ export type SessionPromptData = {
     }
     system?: string
     variant?: string
+    thinking?: boolean
+    claudeCodeFlow?: boolean
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
   }
   query?: {
@@ -3170,12 +3864,42 @@ export type SessionPromptResponses = {
 
 export type SessionPromptResponse = SessionPromptResponses[keyof SessionPromptResponses]
 
+export type SessionDiffData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/session/{sessionID}/diff"
+}
+
+export type SessionDiffErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionDiffError = SessionDiffErrors[keyof SessionDiffErrors]
+
+export type SessionDiffResponses = {
+  /**
+   * List of diffs
+   */
+  200: Array<FileDiff>
+}
+
+export type SessionDiffResponse = SessionDiffResponses[keyof SessionDiffResponses]
+
 export type SessionMessageData = {
   body?: never
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
     /**
      * Message ID
@@ -3216,9 +3940,6 @@ export type SessionMessageResponse = SessionMessageResponses[keyof SessionMessag
 export type PartDeleteData = {
   body?: never
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
     /**
      * Message ID
@@ -3260,9 +3981,6 @@ export type PartDeleteResponse = PartDeleteResponses[keyof PartDeleteResponses]
 export type PartUpdateData = {
   body?: Part
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
     /**
      * Message ID
@@ -3318,12 +4036,11 @@ export type SessionPromptAsyncData = {
     }
     system?: string
     variant?: string
+    thinking?: boolean
+    claudeCodeFlow?: boolean
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
   }
   query?: {
@@ -3372,9 +4089,6 @@ export type SessionCommandData = {
     }>
   }
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
   }
   query?: {
@@ -3418,9 +4132,6 @@ export type SessionShellData = {
     command: string
   }
   path: {
-    /**
-     * Session ID
-     */
     sessionID: string
   }
   query?: {
@@ -3520,6 +4231,76 @@ export type SessionUnrevertResponses = {
 
 export type SessionUnrevertResponse = SessionUnrevertResponses[keyof SessionUnrevertResponses]
 
+export type SessionWorktreeDeleteData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/session/{sessionID}/worktree"
+}
+
+export type SessionWorktreeDeleteErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionWorktreeDeleteError = SessionWorktreeDeleteErrors[keyof SessionWorktreeDeleteErrors]
+
+export type SessionWorktreeDeleteResponses = {
+  /**
+   * Worktree removed
+   */
+  200: boolean
+}
+
+export type SessionWorktreeDeleteResponse = SessionWorktreeDeleteResponses[keyof SessionWorktreeDeleteResponses]
+
+export type SessionWorktreeGetData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/session/{sessionID}/worktree"
+}
+
+export type SessionWorktreeGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionWorktreeGetError = SessionWorktreeGetErrors[keyof SessionWorktreeGetErrors]
+
+export type SessionWorktreeGetResponses = {
+  /**
+   * Worktree status
+   */
+  200: {
+    exists: boolean
+    path?: string
+    cleanup?: "ask" | "always" | "never"
+  }
+}
+
+export type SessionWorktreeGetResponse = SessionWorktreeGetResponses[keyof SessionWorktreeGetResponses]
+
 export type PermissionRespondData = {
   body?: {
     response: "once" | "always" | "reject"
@@ -3559,7 +4340,6 @@ export type PermissionRespondResponse = PermissionRespondResponses[keyof Permiss
 export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
-    message?: string
   }
   path: {
     requestID: string
@@ -3610,71 +4390,123 @@ export type PermissionListResponses = {
 
 export type PermissionListResponse = PermissionListResponses[keyof PermissionListResponses]
 
-export type QuestionListData = {
+export type AskuserReplyData = {
+  body?: {
+    answers: {
+      [key: string]: string
+    }
+  }
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/askuser/{requestID}/reply"
+}
+
+export type AskuserReplyErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type AskuserReplyError = AskuserReplyErrors[keyof AskuserReplyErrors]
+
+export type AskuserReplyResponses = {
+  /**
+   * Answers submitted successfully
+   */
+  200: boolean
+}
+
+export type AskuserReplyResponse = AskuserReplyResponses[keyof AskuserReplyResponses]
+
+export type AskuserListData = {
   body?: never
   path?: never
   query?: {
     directory?: string
   }
-  url: "/question"
+  url: "/askuser"
 }
 
-export type QuestionListResponses = {
+export type AskuserListResponses = {
   /**
    * List of pending questions
    */
-  200: Array<QuestionRequest>
+  200: Array<{
+    id: string
+    sessionID: string
+    messageID: string
+    callID: string
+    questions: Array<{
+      question: string
+      header: string
+      options: Array<{
+        label: string
+        description: string
+      }>
+      multiSelect: boolean
+    }>
+  }>
 }
 
-export type QuestionListResponse = QuestionListResponses[keyof QuestionListResponses]
+export type AskuserListResponse = AskuserListResponses[keyof AskuserListResponses]
 
-export type QuestionReplyData = {
-  body?: {
-    answers: Array<string>
-  }
-  path: {
-    requestID: string
-  }
-  query?: {
-    directory?: string
-  }
-  url: "/question/{requestID}/reply"
-}
-
-export type QuestionReplyErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type QuestionReplyError = QuestionReplyErrors[keyof QuestionReplyErrors]
-
-export type QuestionReplyResponses = {
-  /**
-   * Question answered successfully
-   */
-  200: boolean
-}
-
-export type QuestionReplyResponse = QuestionReplyResponses[keyof QuestionReplyResponses]
-
-export type QuestionRejectData = {
+export type AskuserListForSessionData = {
   body?: never
   path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/session/{sessionID}/askuser"
+}
+
+export type AskuserListForSessionResponses = {
+  /**
+   * List of pending questions for session
+   */
+  200: Array<{
+    id: string
+    sessionID: string
+    messageID: string
+    callID: string
+    questions: Array<{
+      question: string
+      header: string
+      options: Array<{
+        label: string
+        description: string
+      }>
+      multiSelect: boolean
+    }>
+  }>
+}
+
+export type AskuserListForSessionResponse = AskuserListForSessionResponses[keyof AskuserListForSessionResponses]
+
+export type PlanmodeReplyData = {
+  body?: {
+    approved: boolean
+  }
+  path: {
     requestID: string
   }
   query?: {
     directory?: string
   }
-  url: "/question/{requestID}/reject"
+  url: "/planmode/{requestID}/reply"
 }
 
-export type QuestionRejectErrors = {
+export type PlanmodeReplyErrors = {
   /**
    * Bad request
    */
@@ -3685,16 +4517,66 @@ export type QuestionRejectErrors = {
   404: NotFoundError
 }
 
-export type QuestionRejectError = QuestionRejectErrors[keyof QuestionRejectErrors]
+export type PlanmodeReplyError = PlanmodeReplyErrors[keyof PlanmodeReplyErrors]
 
-export type QuestionRejectResponses = {
+export type PlanmodeReplyResponses = {
   /**
-   * Question rejected successfully
+   * Response submitted successfully
    */
   200: boolean
 }
 
-export type QuestionRejectResponse = QuestionRejectResponses[keyof QuestionRejectResponses]
+export type PlanmodeReplyResponse = PlanmodeReplyResponses[keyof PlanmodeReplyResponses]
+
+export type PlanmodeListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/planmode"
+}
+
+export type PlanmodeListResponses = {
+  /**
+   * List of pending plan reviews
+   */
+  200: Array<{
+    id: string
+    sessionID: string
+    messageID: string
+    callID: string
+    plan: string
+  }>
+}
+
+export type PlanmodeListResponse = PlanmodeListResponses[keyof PlanmodeListResponses]
+
+export type PlanmodeListForSessionData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/session/{sessionID}/planmode"
+}
+
+export type PlanmodeListForSessionResponses = {
+  /**
+   * List of pending plan reviews for session
+   */
+  200: Array<{
+    id: string
+    sessionID: string
+    messageID: string
+    callID: string
+    plan: string
+  }>
+}
+
+export type PlanmodeListForSessionResponse = PlanmodeListForSessionResponses[keyof PlanmodeListForSessionResponses]
 
 export type CommandListData = {
   body?: never
@@ -4622,80 +5504,27 @@ export type TuiPublishResponses = {
 
 export type TuiPublishResponse = TuiPublishResponses[keyof TuiPublishResponses]
 
-export type TuiSelectSessionData = {
-  body?: {
-    /**
-     * Session ID to navigate to
-     */
-    sessionID: string
-  }
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/select-session"
-}
-
-export type TuiSelectSessionErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type TuiSelectSessionError = TuiSelectSessionErrors[keyof TuiSelectSessionErrors]
-
-export type TuiSelectSessionResponses = {
-  /**
-   * Session selected successfully
-   */
-  200: boolean
-}
-
-export type TuiSelectSessionResponse = TuiSelectSessionResponses[keyof TuiSelectSessionResponses]
-
-export type TuiControlNextData = {
+export type AuthGetData = {
   body?: never
-  path?: never
+  path: {
+    providerID: string
+  }
   query?: {
     directory?: string
   }
-  url: "/tui/control/next"
+  url: "/auth/{providerID}"
 }
 
-export type TuiControlNextResponses = {
+export type AuthGetResponses = {
   /**
-   * Next TUI request
+   * Auth status
    */
   200: {
-    path: string
-    body: unknown
+    type: "api" | "oauth" | "wellknown"
   }
 }
 
-export type TuiControlNextResponse = TuiControlNextResponses[keyof TuiControlNextResponses]
-
-export type TuiControlResponseData = {
-  body?: unknown
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/control/response"
-}
-
-export type TuiControlResponseResponses = {
-  /**
-   * Response submitted successfully
-   */
-  200: boolean
-}
-
-export type TuiControlResponseResponse = TuiControlResponseResponses[keyof TuiControlResponseResponses]
+export type AuthGetResponse = AuthGetResponses[keyof AuthGetResponses]
 
 export type AuthSetData = {
   body?: Auth
@@ -4725,6 +5554,89 @@ export type AuthSetResponses = {
 }
 
 export type AuthSetResponse = AuthSetResponses[keyof AuthSetResponses]
+
+export type ProviderRoutingGetData = {
+  body?: never
+  path: {
+    providerID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/provider/{providerID}/routing"
+}
+
+export type ProviderRoutingGetResponses = {
+  /**
+   * Provider routing settings
+   */
+  200: {
+    order?: Array<string>
+    allow_fallbacks?: boolean
+    require_parameters?: boolean
+    data_collection?: "allow" | "deny"
+    only?: Array<string>
+  }
+}
+
+export type ProviderRoutingGetResponse = ProviderRoutingGetResponses[keyof ProviderRoutingGetResponses]
+
+export type ProviderRoutingSetData = {
+  body?: {
+    order?: Array<string>
+    allow_fallbacks?: boolean
+    require_parameters?: boolean
+    data_collection?: "allow" | "deny"
+    only?: Array<string>
+  }
+  path: {
+    providerID: "openrouter" | "vercel"
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/provider/{providerID}/routing"
+}
+
+export type ProviderRoutingSetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ProviderRoutingSetError = ProviderRoutingSetErrors[keyof ProviderRoutingSetErrors]
+
+export type ProviderRoutingSetResponses = {
+  /**
+   * Successfully set routing settings
+   */
+  200: boolean
+}
+
+export type ProviderRoutingSetResponse = ProviderRoutingSetResponses[keyof ProviderRoutingSetResponses]
+
+export type ProviderRoutingProvidersData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/provider/routing/providers"
+}
+
+export type ProviderRoutingProvidersResponses = {
+  /**
+   * Available providers for routing
+   */
+  200: {
+    openrouter: Array<string>
+    vercel: Array<string>
+  }
+}
+
+export type ProviderRoutingProvidersResponse =
+  ProviderRoutingProvidersResponses[keyof ProviderRoutingProvidersResponses]
 
 export type EventSubscribeData = {
   body?: never

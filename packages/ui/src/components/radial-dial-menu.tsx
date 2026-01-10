@@ -84,19 +84,9 @@ export function RadialDialMenu(props: RadialDialMenuProps) {
         "z-index": "9999",
       }}
     >
-      <svg
-        width="240"
-        height="240"
-        viewBox="-120 -120 240 240"
-        data-slot="radial-dial-svg"
-      >
+      <svg width="240" height="240" viewBox="-120 -120 240 240" data-slot="radial-dial-svg">
         {/* Background blur circle */}
-        <circle
-          cx="0"
-          cy="0"
-          r="110"
-          data-slot="radial-dial-backdrop"
-        />
+        <circle cx="0" cy="0" r="110" data-slot="radial-dial-backdrop" />
 
         {/* Segments */}
         <For each={segments()}>
@@ -118,25 +108,12 @@ export function RadialDialMenu(props: RadialDialMenuProps) {
               data-highlighted={props.highlightedAction === segment.action}
               transform={`translate(${segment.labelPos.x}, ${segment.labelPos.y})`}
             >
-              <foreignObject
-                x="-10"
-                y="-18"
-                width="20"
-                height="20"
-                style={{ overflow: "visible" }}
-              >
-                <div
-                  data-slot="radial-dial-icon"
-                  data-highlighted={props.highlightedAction === segment.action}
-                >
+              <foreignObject x="-10" y="-18" width="20" height="20" style={{ overflow: "visible" }}>
+                <div data-slot="radial-dial-icon" data-highlighted={props.highlightedAction === segment.action}>
                   <Icon name={segment.icon as any} size="small" />
                 </div>
               </foreignObject>
-              <text
-                y="12"
-                data-slot="radial-dial-label"
-                data-highlighted={props.highlightedAction === segment.action}
-              >
+              <text y="12" data-slot="radial-dial-label" data-highlighted={props.highlightedAction === segment.action}>
                 {segment.label}
               </text>
             </g>
@@ -144,12 +121,7 @@ export function RadialDialMenu(props: RadialDialMenuProps) {
         </For>
 
         {/* Center indicator */}
-        <circle
-          cx="0"
-          cy="0"
-          r="6"
-          data-slot="radial-dial-center"
-        />
+        <circle cx="0" cy="0" r="6" data-slot="radial-dial-center" />
       </svg>
     </div>
   )

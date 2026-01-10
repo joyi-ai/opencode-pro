@@ -173,12 +173,9 @@ export namespace ClaudePluginSchema {
     decision: z.enum(["allow", "deny", "approve", "block", "ask"]).optional(),
     reason: z.string().optional(),
     // Hook-specific output (preferred)
-    hookSpecificOutput: z.union([
-      PreToolUseHookOutput,
-      PostToolUseHookOutput,
-      PreCompactHookOutput,
-      StopHookOutput,
-    ]).optional(),
+    hookSpecificOutput: z
+      .union([PreToolUseHookOutput, PostToolUseHookOutput, PreCompactHookOutput, StopHookOutput])
+      .optional(),
   }).meta({ ref: "ClaudePluginHookOutput" })
   export type HookOutput = z.infer<typeof HookOutput>
 
@@ -217,9 +214,7 @@ export namespace ClaudePluginSchema {
     type: z.enum(["stdio", "sse"]).optional(),
   })
 
-  export const McpConfig = z
-    .record(z.string(), McpServerConfig)
-    .meta({ ref: "ClaudePluginMcpConfig" })
+  export const McpConfig = z.record(z.string(), McpServerConfig).meta({ ref: "ClaudePluginMcpConfig" })
 
   export type McpConfig = z.infer<typeof McpConfig>
 
@@ -231,9 +226,7 @@ export namespace ClaudePluginSchema {
     env: z.record(z.string(), z.string()).optional(),
   })
 
-  export const LspConfig = z
-    .record(z.string(), LspServerConfig)
-    .meta({ ref: "ClaudePluginLspConfig" })
+  export const LspConfig = z.record(z.string(), LspServerConfig).meta({ ref: "ClaudePluginLspConfig" })
 
   export type LspConfig = z.infer<typeof LspConfig>
 
@@ -322,9 +315,14 @@ export namespace ClaudePluginSchema {
       category: z.string().optional(),
       strict: z.boolean().optional(),
       // Inline LSP servers (some plugins define these directly)
-      lspServers: z.record(z.string(), LspServerConfig.extend({
-        startupTimeout: z.number().optional(),
-      })).optional(),
+      lspServers: z
+        .record(
+          z.string(),
+          LspServerConfig.extend({
+            startupTimeout: z.number().optional(),
+          }),
+        )
+        .optional(),
     })
     .transform((entry) => ({
       ...entry,

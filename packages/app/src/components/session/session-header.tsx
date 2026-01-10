@@ -20,6 +20,7 @@ import { DialogSelectServer } from "@/components/dialog-select-server"
 import { SessionLspIndicator } from "@/components/session-lsp-indicator"
 import { SessionMcpIndicator } from "@/components/session-mcp-indicator"
 import type { Session } from "@opencode-ai/sdk/v2/client"
+import { same } from "@/utils/same"
 
 export function SessionHeader() {
   const globalSDK = useGlobalSDK()

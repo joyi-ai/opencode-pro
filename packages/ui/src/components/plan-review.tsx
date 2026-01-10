@@ -98,22 +98,12 @@ export const PlanReview: Component<PlanReviewProps> = (props) => {
         </div>
       </Show>
       <div data-slot="plan-review-actions">
-        <Button
-          variant="ghost"
-          size="small"
-          onClick={handleReject}
-          disabled={isSubmitting()}
-        >
+        <Button variant="ghost" size="small" onClick={handleReject} disabled={isSubmitting()}>
           <Show when={isSubmitting()} fallback="Reject">
             ...
           </Show>
         </Button>
-        <Button
-          variant="primary"
-          size="small"
-          onClick={handleApprove}
-          disabled={isSubmitting()}
-        >
+        <Button variant="primary" size="small" onClick={handleApprove} disabled={isSubmitting()}>
           <Show when={isSubmitting()} fallback="Approve Plan">
             Approving...
           </Show>

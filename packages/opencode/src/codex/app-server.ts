@@ -57,27 +57,30 @@ function createDeferred<T>() {
 
 export namespace CodexAppServer {
   const log = Log.create({ service: "codex-app-server" })
-  const state = Instance.state(async () => {
-    return {
-      proc: undefined as ChildProcessWithoutNullStreams | undefined,
-      buffer: "",
-      nextID: 0,
-      pending: new Map<number, Pending>(),
-      listeners: new Set<(message: Notification) => void>(),
-      requests: new Set<(message: Request) => Promise<boolean>>(),
-      exits: new Set<(error: Error) => void>(),
-      ready: undefined as Promise<void> | undefined,
-      readyResolve: undefined as (() => void) | undefined,
-      login: new Map<string, LoginState>(),
-      stopping: false,
-    }
-  }, async (current) => {
-    const proc = current.proc
-    if (!proc) return
-    current.stopping = true
-    current.proc = undefined
-    await Shell.killTree(proc).catch(() => {})
-  })
+  const state = Instance.state(
+    async () => {
+      return {
+        proc: undefined as ChildProcessWithoutNullStreams | undefined,
+        buffer: "",
+        nextID: 0,
+        pending: new Map<number, Pending>(),
+        listeners: new Set<(message: Notification) => void>(),
+        requests: new Set<(message: Request) => Promise<boolean>>(),
+        exits: new Set<(error: Error) => void>(),
+        ready: undefined as Promise<void> | undefined,
+        readyResolve: undefined as (() => void) | undefined,
+        login: new Map<string, LoginState>(),
+        stopping: false,
+      }
+    },
+    async (current) => {
+      const proc = current.proc
+      if (!proc) return
+      current.stopping = true
+      current.proc = undefined
+      await Shell.killTree(proc).catch(() => {})
+    },
+  )
 
   function platformBinaryName() {
     const platform = process.platform
@@ -112,7 +115,9 @@ export namespace CodexAppServer {
     const lower = file.toLowerCase()
     if (lower.endsWith(".cmd") || lower.endsWith(".bat") || lower.endsWith(".ps1")) return true
     if (lower.endsWith(".exe")) return false
-    const content = await Bun.file(file).text().catch(() => "")
+    const content = await Bun.file(file)
+      .text()
+      .catch(() => "")
     if (!content) return false
     if (content.includes("codex.js")) return true
     if (content.startsWith("#!/usr/bin/env node")) return true
@@ -160,9 +165,10 @@ export namespace CodexAppServer {
     const platformBinary = platformBinaryName()
     const vendorDir = vendorPlatformDir()
     const vendorBinary = vendorBinaryName()
-    const windowsNodeRoot = process.platform === "win32"
-      ? path.join(home, "AppData", "Roaming", "npm", "node_modules", "@openai", "codex")
-      : ""
+    const windowsNodeRoot =
+      process.platform === "win32"
+        ? path.join(home, "AppData", "Roaming", "npm", "node_modules", "@openai", "codex")
+        : ""
     const nodeRoots = [
       path.join(home, ".bun", "install", "global", "node_modules", "@openai", "codex"),
       path.join(home, ".local", "share", "npm", "lib", "node_modules", "@openai", "codex"),
@@ -176,36 +182,37 @@ export namespace CodexAppServer {
       ? nodeRoots.map((root) => path.join(root, "vendor", vendorDir, "codex", vendorBinary))
       : []
 
-    const paths = process.platform === "win32"
-      ? [
-          path.join(home, ".local", "bin", "codex.exe"),
-          path.join(home, "AppData", "Roaming", "npm", "codex.cmd"),
-          path.join(home, "AppData", "Roaming", "npm", "codex.exe"),
-          path.join(home, "AppData", "Roaming", "npm", "codex"),
-          path.join(home, "AppData", "Local", "pnpm", "codex.cmd"),
-          path.join(home, "AppData", "Local", "pnpm", "codex.exe"),
-          path.join(home, "AppData", "Local", "Yarn", "bin", "codex.cmd"),
-          path.join(home, "AppData", "Local", "Yarn", "bin", "codex.exe"),
-          path.join(home, "scoop", "shims", "codex.exe"),
-          "C:\\ProgramData\\chocolatey\\bin\\codex.exe",
-        ]
-      : [
-          path.join(home, ".local", "bin", "codex"),
-          "/usr/local/bin/codex",
-          "/usr/bin/codex",
-          "/opt/homebrew/bin/codex",
-          path.join(home, ".npm-global", "bin", "codex"),
-          path.join(home, ".nvm", "versions", "node", "**", "bin", "codex"),
-          path.join(home, ".local", "share", "pnpm", "codex"),
-          path.join(home, "Library", "pnpm", "codex"),
-          path.join(home, ".yarn", "bin", "codex"),
-          path.join(home, ".config", "yarn", "global", "node_modules", ".bin", "codex"),
-          path.join(home, ".bun", "bin", "codex"),
-          path.join(home, ".volta", "bin", "codex"),
-          path.join(home, ".asdf", "shims", "codex"),
-          path.join(home, ".fnm", "current", "bin", "codex"),
-          "/usr/local/n/versions/node/*/bin/codex",
-        ]
+    const paths =
+      process.platform === "win32"
+        ? [
+            path.join(home, ".local", "bin", "codex.exe"),
+            path.join(home, "AppData", "Roaming", "npm", "codex.cmd"),
+            path.join(home, "AppData", "Roaming", "npm", "codex.exe"),
+            path.join(home, "AppData", "Roaming", "npm", "codex"),
+            path.join(home, "AppData", "Local", "pnpm", "codex.cmd"),
+            path.join(home, "AppData", "Local", "pnpm", "codex.exe"),
+            path.join(home, "AppData", "Local", "Yarn", "bin", "codex.cmd"),
+            path.join(home, "AppData", "Local", "Yarn", "bin", "codex.exe"),
+            path.join(home, "scoop", "shims", "codex.exe"),
+            "C:\\ProgramData\\chocolatey\\bin\\codex.exe",
+          ]
+        : [
+            path.join(home, ".local", "bin", "codex"),
+            "/usr/local/bin/codex",
+            "/usr/bin/codex",
+            "/opt/homebrew/bin/codex",
+            path.join(home, ".npm-global", "bin", "codex"),
+            path.join(home, ".nvm", "versions", "node", "**", "bin", "codex"),
+            path.join(home, ".local", "share", "pnpm", "codex"),
+            path.join(home, "Library", "pnpm", "codex"),
+            path.join(home, ".yarn", "bin", "codex"),
+            path.join(home, ".config", "yarn", "global", "node_modules", ".bin", "codex"),
+            path.join(home, ".bun", "bin", "codex"),
+            path.join(home, ".volta", "bin", "codex"),
+            path.join(home, ".asdf", "shims", "codex"),
+            path.join(home, ".fnm", "current", "bin", "codex"),
+            "/usr/local/n/versions/node/*/bin/codex",
+          ]
 
     const picked = await pickExecutable([...binCandidates, ...vendorCandidates, ...paths])
     if (picked) {
@@ -310,7 +317,10 @@ export namespace CodexAppServer {
     }
   }
 
-  function emitExit(current: Awaited<ReturnType<typeof state>>, info: { message: string; code?: number; signal?: string }) {
+  function emitExit(
+    current: Awaited<ReturnType<typeof state>>,
+    info: { message: string; code?: number; signal?: string },
+  ) {
     if (current.stopping) return
     GlobalBus.emit("event", {
       directory: Instance.directory,
@@ -382,10 +392,7 @@ export namespace CodexAppServer {
     })
 
     proc.on("exit", (code, signal) => {
-      const details = [
-        typeof code === "number" ? `code ${code}` : "",
-        signal ? `signal ${signal}` : "",
-      ]
+      const details = [typeof code === "number" ? `code ${code}` : "", signal ? `signal ${signal}` : ""]
         .filter(Boolean)
         .join(", ")
       const message = details ? `Codex app-server exited (${details})` : "Codex app-server exited"

@@ -145,12 +145,7 @@ export const AskUserQuestion: Component<AskUserQuestionProps> = (props) => {
       {renderQuestions()}
       <Show when={hasSelections()}>
         <div data-slot="ask-user-submit">
-          <Button
-            variant="primary"
-            size="small"
-            onClick={handleSubmit}
-            disabled={isSubmitting()}
-          >
+          <Button variant="primary" size="small" onClick={handleSubmit} disabled={isSubmitting()}>
             <Show when={isSubmitting()} fallback="Submit">
               Submitting...
             </Show>

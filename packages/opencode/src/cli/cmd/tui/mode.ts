@@ -163,4 +163,3 @@ export function isAgentAllowed(name: string, target?: ModeDefinition) {
 export function filterAgents<T extends { name: string }>(agents: T[], target?: ModeDefinition) {
   return agents.filter((agent) => isAgentAllowed(agent.name, target))
 }
-

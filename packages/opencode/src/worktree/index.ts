@@ -94,10 +94,7 @@ export namespace Worktree {
     }
 
     // Create worktree with a new branch at current HEAD
-    const result = await $`git worktree add -b ${branchName} ${worktreePath}`
-      .cwd(Instance.worktree)
-      .quiet()
-      .nothrow()
+    const result = await $`git worktree add -b ${branchName} ${worktreePath}`.cwd(Instance.worktree).quiet().nothrow()
 
     if (result.exitCode !== 0) {
       const stderr = result.stderr.toString()
@@ -131,10 +128,7 @@ export namespace Worktree {
     log.info("removing worktree", { path: worktreePath, branch, deleteBranch })
 
     // First try git worktree remove
-    const result = await $`git worktree remove ${worktreePath} --force`
-      .cwd(Instance.worktree)
-      .quiet()
-      .nothrow()
+    const result = await $`git worktree remove ${worktreePath} --force`.cwd(Instance.worktree).quiet().nothrow()
 
     if (result.exitCode !== 0) {
       const stderr = result.stderr.toString()
@@ -438,4 +432,3 @@ export namespace Worktree {
     return info
   })
 }
-

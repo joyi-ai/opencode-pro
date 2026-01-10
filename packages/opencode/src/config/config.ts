@@ -957,10 +957,7 @@ export namespace Config {
         .catchall(Agent)
         .optional()
         .describe("Agent configuration, see https://opencode.ai/docs/agent"),
-      modes: z
-        .record(z.string(), Mode)
-        .optional()
-        .describe("Mode configuration for the app UI"),
+      modes: z.record(z.string(), Mode).optional().describe("Mode configuration for the app UI"),
       provider: z
         .record(z.string(), Provider)
         .optional()

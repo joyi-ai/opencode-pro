@@ -1,4 +1,4 @@
-import { For, Show, createEffect, on, onCleanup, onMount } from "solid-js"
+import { For, Show, createEffect, createMemo, on, onCleanup, onMount } from "solid-js"
 import { useMultiPane } from "@/context/multi-pane"
 import { useLayout } from "@/context/layout"
 import { useTerminal, type LocalPTY } from "@/context/terminal"
@@ -22,6 +22,10 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
   const prompt = usePrompt()
   const local = useLocal()
   const sdk = useSDK()
+  const sessionKey = createMemo(
+    () => `multi-${props.paneId}-${sdk.directory}${props.sessionId ? "/" + props.sessionId : ""}`,
+  )
+  const view = createMemo(() => layout.view(sessionKey()))
 
   let editorRef: HTMLDivElement | undefined
 
@@ -117,7 +121,7 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
 
   return (
     <div class="shrink-0 flex flex-col border-t border-border-weak-base">
-      <Show when={layout.terminal.opened()}>
+      <Show when={view().terminal.opened()}>
         <div
           class="relative w-full flex flex-col shrink-0"
           style={{ height: `${Math.min(layout.terminal.height(), MAX_TERMINAL_HEIGHT)}px` }}
@@ -129,7 +133,7 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
             max={300}
             collapseThreshold={40}
             onResize={layout.terminal.resize}
-            onCollapse={layout.terminal.close}
+            onCollapse={view().terminal.close}
           />
           <Tabs variant="alt" value={terminal.active()} onChange={terminal.open}>
             <Tabs.List class="h-8">

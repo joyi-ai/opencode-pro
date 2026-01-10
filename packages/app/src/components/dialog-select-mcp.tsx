@@ -39,9 +39,16 @@ export const DialogSelectMcp: Component = () => {
     if (loading()) return
     setLoading(name)
     const status = sync.data.mcp[name]
-    const error = status?.status === "connected"
-      ? await sdk.client.mcp.disconnect({ name }).then(() => undefined).catch((err) => err as Error)
-      : await sdk.client.mcp.connect({ name }).then(() => undefined).catch((err) => err as Error)
+    const error =
+      status?.status === "connected"
+        ? await sdk.client.mcp
+            .disconnect({ name })
+            .then(() => undefined)
+            .catch((err) => err as Error)
+        : await sdk.client.mcp
+            .connect({ name })
+            .then(() => undefined)
+            .catch((err) => err as Error)
     if (error) {
       showToast({
         variant: "error",
@@ -102,11 +109,7 @@ export const DialogSelectMcp: Component = () => {
     <Dialog title="MCPs" description={`${enabledCount()} of ${totalCount()} enabled`}>
       <div class="flex items-center justify-between px-2.5 pb-2">
         <div class="text-12-regular text-text-weak">Synced to OpenCode, Claude Code, and Codex</div>
-        <Button
-          size="small"
-          icon="plus"
-          onClick={() => showEdit()}
-        >
+        <Button size="small" icon="plus" onClick={() => showEdit()}>
           Add MCP
         </Button>
       </div>
@@ -160,20 +163,17 @@ export const DialogSelectMcp: Component = () => {
               </div>
               <div class="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <Show when={status() === "needs_auth"}>
-                  <Button size="small" variant="ghost" onClick={() => authenticate(i.name)} disabled={loading() === i.name}>
+                  <Button
+                    size="small"
+                    variant="ghost"
+                    onClick={() => authenticate(i.name)}
+                    disabled={loading() === i.name}
+                  >
                     Auth
                   </Button>
                 </Show>
-                <IconButton
-                  icon="edit-small-2"
-                  variant="ghost"
-                  onClick={() => showEdit(i.name, i.entry)}
-                />
-                <IconButton
-                  icon="circle-x"
-                  variant="ghost"
-                  onClick={() => showRemove(i.name)}
-                />
+                <IconButton icon="edit-small-2" variant="ghost" onClick={() => showEdit(i.name, i.entry)} />
+                <IconButton icon="circle-x" variant="ghost" onClick={() => showRemove(i.name)} />
                 <Switch checked={enabled()} disabled={loading() === i.name} onChange={() => toggle(i.name)} />
               </div>
             </div>

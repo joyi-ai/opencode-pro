@@ -140,7 +140,10 @@ export namespace SessionProcessor {
                     })
                     toolcalls[value.toolCallId] = part as MessageV2.ToolPart
 
-                    const parts = await MessageV2.parts({ sessionID: input.sessionID, messageID: input.assistantMessage.id })
+                    const parts = await MessageV2.parts({
+                      sessionID: input.sessionID,
+                      messageID: input.assistantMessage.id,
+                    })
                     const lastThree = parts.slice(-DOOM_LOOP_THRESHOLD)
 
                     if (

@@ -48,15 +48,9 @@ export type PermissionRespondFn = (input: {
 
 export type NavigateToSessionFn = (sessionID: string) => void
 
-export type AskUserRespondFn = (input: {
-  requestID: string
-  answers: Record<string, string>
-}) => Promise<unknown>
+export type AskUserRespondFn = (input: { requestID: string; answers: Record<string, string> }) => Promise<unknown>
 
-export type PlanModeRespondFn = (input: {
-  requestID: string
-  approved: boolean
-}) => Promise<unknown>
+export type PlanModeRespondFn = (input: { requestID: string; approved: boolean }) => Promise<unknown>
 
 export const { use: useData, provider: DataProvider } = createSimpleContext({
   name: "Data",

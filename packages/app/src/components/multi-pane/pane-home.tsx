@@ -52,7 +52,10 @@ export function PaneHome(props: PaneHomeProps) {
   }
 
   return (
-    <div class="relative size-full flex flex-col overflow-hidden transition-colors duration-150" onMouseDown={handleMouseDown}>
+    <div
+      class="relative size-full flex flex-col overflow-hidden transition-colors duration-150"
+      onMouseDown={handleMouseDown}
+    >
       <Show when={showBorder()}>
         <div
           class="pointer-events-none absolute inset-0 z-30 border"

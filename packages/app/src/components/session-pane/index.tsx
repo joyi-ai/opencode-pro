@@ -1,12 +1,4 @@
-import {
-  Show,
-  createMemo,
-  createEffect,
-  on,
-  onMount,
-  onCleanup,
-  type Accessor,
-} from "solid-js"
+import { Show, createMemo, createEffect, on, onMount, onCleanup, type Accessor } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useParams, useNavigate } from "@solidjs/router"
 import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
@@ -58,7 +50,9 @@ export function SessionPane(props: SessionPaneProps) {
   const layout = useLayout()
   const dialog = useDialog()
   const multiPane = props.mode === "multi" ? useMultiPane() : undefined
-  const hasMultiplePanes = createMemo(() => (props.mode === "multi" && multiPane ? multiPane.panes().length > 1 : false))
+  const hasMultiplePanes = createMemo(() =>
+    props.mode === "multi" && multiPane ? multiPane.panes().length > 1 : false,
+  )
 
   // Local state
   const [store, setStore] = createStore({
@@ -74,9 +68,7 @@ export function SessionPane(props: SessionPaneProps) {
   const expectedDirectory = createMemo(() =>
     props.mode === "single" ? (params.dir ? base64Decode(params.dir) : "") : props.directory,
   )
-  const sdkDirectoryMatches = createMemo(
-    () => expectedDirectory() !== "" && sdk.directory === expectedDirectory(),
-  )
+  const sdkDirectoryMatches = createMemo(() => expectedDirectory() !== "" && sdk.directory === expectedDirectory())
 
   // Session key for tabs
   const sessionKey = createMemo(() =>
@@ -87,6 +79,7 @@ export function SessionPane(props: SessionPaneProps) {
 
   // Tab management
   const tabs = createMemo(() => layout.tabs(sessionKey()))
+  const view = createMemo(() => layout.view(sessionKey()))
 
   // Session info
   const info = createMemo(() => {
@@ -121,19 +114,14 @@ export function SessionPane(props: SessionPaneProps) {
   useSessionSync({
     sessionId,
     directoryMatches: sdkDirectoryMatches,
-    onNotFound:
-      props.mode === "single"
-        ? () => navigate(`/${params.dir}/session`, { replace: true })
-        : undefined,
+    onNotFound: props.mode === "single" ? () => navigate(`/${params.dir}/session`, { replace: true }) : undefined,
   })
 
   // Status
   const idle = { type: "idle" as const }
   const status = createMemo(() => sync.data.session_status[sessionId() ?? ""] ?? idle)
   const working = createMemo(
-    () =>
-      status().type !== "idle" &&
-      sessionMessages.activeMessage()?.id === sessionMessages.lastUserMessage()?.id,
+    () => status().type !== "idle" && sessionMessages.activeMessage()?.id === sessionMessages.lastUserMessage()?.id,
   )
 
   createEffect(
@@ -189,6 +177,7 @@ export function SessionPane(props: SessionPaneProps) {
   // Session commands (only if enabled/focused)
   useSessionCommands({
     sessionId,
+    sessionKey,
     isEnabled: props.mode === "multi" ? isFocused : () => true,
     onNavigateMessage: sessionMessages.navigateByOffset,
     onToggleSteps: () => setStore("stepsExpanded", (x) => !x),
@@ -204,8 +193,7 @@ export function SessionPane(props: SessionPaneProps) {
     const activeElement = document.activeElement as HTMLElement | undefined
     if (activeElement) {
       const isProtected = activeElement.closest("[data-prevent-autofocus]")
-      const isInput =
-        /^(INPUT|TEXTAREA|SELECT)$/.test(activeElement.tagName) || activeElement.isContentEditable
+      const isInput = /^(INPUT|TEXTAREA|SELECT)$/.test(activeElement.tagName) || activeElement.isContentEditable
       if (isProtected || isInput) return
     }
     if (dialog.active) return
@@ -234,14 +222,12 @@ export function SessionPane(props: SessionPaneProps) {
   })
 
   // Computed: show tabs panel
-  const contextOpen = createMemo(
-    () => tabs().active() === "context" || tabs().all().includes("context"),
-  )
+  const contextOpen = createMemo(() => tabs().active() === "context" || tabs().all().includes("context"))
   const allowLocalReview = createMemo(() => props.reviewMode !== "global")
   const showTabs = createMemo(
     () =>
       allowLocalReview() &&
-      layout.review.opened() &&
+      view().reviewPanel.opened() &&
       (diffs().length > 0 || tabs().all().length > 0 || contextOpen()),
   )
 
@@ -354,23 +340,18 @@ export function SessionPane(props: SessionPaneProps) {
       onMouseMove={props.mode === "multi" ? headerOverlay.handleMouseMove : undefined}
     >
       <Show when={props.mode === "multi" && hasMultiplePanes()}>
-      <div
-        class="pointer-events-none absolute inset-0 z-30 border"
-        classList={{
-          "border-border-accent-base": isFocused(),
-          "border-border-strong-base": !isFocused(),
-        }}
-      />
+        <div
+          class="pointer-events-none absolute inset-0 z-30 border"
+          classList={{
+            "border-border-accent-base": isFocused(),
+            "border-border-strong-base": !isFocused(),
+          }}
+        />
       </Show>
 
       {/* Header */}
       <Show when={props.mode === "single"}>
-        <SessionPaneHeader
-          mode="single"
-          directory={props.directory}
-          sessionId={sessionId()}
-          isFocused={isFocused}
-        />
+        <SessionPaneHeader mode="single" directory={props.directory} sessionId={sessionId()} isFocused={isFocused} />
       </Show>
       <Show when={props.mode === "multi"}>
         <div

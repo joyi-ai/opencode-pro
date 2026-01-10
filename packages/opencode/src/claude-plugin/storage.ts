@@ -33,9 +33,7 @@ export namespace ClaudePluginStorage {
    * Get a specific installed plugin by ID
    */
   export async function get(id: string): Promise<ClaudePluginSchema.InstalledPlugin | undefined> {
-    const plugin = await Storage.read<ClaudePluginSchema.InstalledPlugin>([...STORAGE_KEY, id]).catch(
-      () => undefined,
-    )
+    const plugin = await Storage.read<ClaudePluginSchema.InstalledPlugin>([...STORAGE_KEY, id]).catch(() => undefined)
     if (!plugin) return undefined
 
     const parsed = ClaudePluginSchema.InstalledPlugin.safeParse(plugin)
@@ -65,13 +63,10 @@ export namespace ClaudePluginStorage {
     id: string,
     enabled: boolean,
   ): Promise<ClaudePluginSchema.InstalledPlugin | undefined> {
-    const updated = await Storage.update<ClaudePluginSchema.InstalledPlugin>(
-      [...STORAGE_KEY, id],
-      (draft) => {
-        draft.enabled = enabled
-        draft.updatedAt = Date.now()
-      },
-    ).catch(() => undefined)
+    const updated = await Storage.update<ClaudePluginSchema.InstalledPlugin>([...STORAGE_KEY, id], (draft) => {
+      draft.enabled = enabled
+      draft.updatedAt = Date.now()
+    }).catch(() => undefined)
 
     if (updated) {
       log.info("updated plugin enabled status", { id, enabled })

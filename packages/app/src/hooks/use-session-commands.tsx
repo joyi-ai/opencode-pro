@@ -1,4 +1,4 @@
-import { type Accessor } from "solid-js"
+import { createMemo, type Accessor } from "solid-js"
 import { useNavigate, useParams } from "@solidjs/router"
 import { useCommand } from "@/context/command"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
@@ -17,6 +17,7 @@ import { extractPromptFromParts } from "@/utils/prompt"
 
 export interface UseSessionCommandsOptions {
   sessionId: Accessor<string | undefined>
+  sessionKey: Accessor<string>
   isEnabled?: Accessor<boolean>
   onNavigateMessage: (offset: number) => void
   onToggleSteps: () => void
@@ -38,6 +39,7 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
   const sync = useSync()
   const prompt = usePrompt()
   const permission = usePermission()
+  const view = createMemo(() => layout.view(options.sessionKey()))
 
   const enabled = () => options.isEnabled?.() ?? true
 
@@ -70,7 +72,7 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
       keybind: "ctrl+`",
       slash: "terminal",
       disabled: !enabled(),
-      onSelect: () => layout.terminal.toggle(),
+      onSelect: () => view().terminal.toggle(),
     },
     {
       id: "review.toggle",
@@ -79,7 +81,7 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
       category: "View",
       keybind: "mod+shift+r",
       disabled: !enabled(),
-      onSelect: () => layout.review.toggle(),
+      onSelect: () => view().reviewPanel.toggle(),
     },
     {
       id: "terminal.new",

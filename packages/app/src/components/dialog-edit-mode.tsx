@@ -105,9 +105,7 @@ export const DialogEditMode: Component<{ mode: ModeDefinition }> = (props) => {
   )
 
   const defaultAgentOptions = createMemo<AgentOption[]>(() => {
-    const defaultLabel = baseMode().defaultAgent
-      ? `Mode default (${baseMode().defaultAgent})`
-      : "Mode default"
+    const defaultLabel = baseMode().defaultAgent ? `Mode default (${baseMode().defaultAgent})` : "Mode default"
     return [
       { id: "mode-default", label: defaultLabel, value: null },
       ...agentOptions().map((agent) => ({
@@ -147,7 +145,7 @@ export const DialogEditMode: Component<{ mode: ModeDefinition }> = (props) => {
       name: store.name.trim() || baseMode().name,
       description: store.description.trim() || undefined,
       color: store.color.trim() || undefined,
-      providerOverride: isLockedProvider() ? props.mode.providerOverride : store.providerOverride ?? undefined,
+      providerOverride: isLockedProvider() ? props.mode.providerOverride : (store.providerOverride ?? undefined),
       defaultAgent: store.defaultAgent ?? undefined,
       settings: store.settings,
     })
@@ -231,9 +229,7 @@ export const DialogEditMode: Component<{ mode: ModeDefinition }> = (props) => {
             <div class="flex flex-col gap-3">
               <Switch
                 checked={!ohMySettings()?.sisyphusAgent?.disabled}
-                onChange={(checked) =>
-                  setStore("settings", "ohMyOpenCode", "sisyphusAgent", "disabled", !checked)
-                }
+                onChange={(checked) => setStore("settings", "ohMyOpenCode", "sisyphusAgent", "disabled", !checked)}
               >
                 Enable Sisyphus orchestrator
               </Switch>
@@ -256,9 +252,7 @@ export const DialogEditMode: Component<{ mode: ModeDefinition }> = (props) => {
                 </Switch>
                 <Switch
                   checked={ohMySettings()?.sisyphusAgent?.replacePlan ?? true}
-                  onChange={(checked) =>
-                    setStore("settings", "ohMyOpenCode", "sisyphusAgent", "replacePlan", checked)
-                  }
+                  onChange={(checked) => setStore("settings", "ohMyOpenCode", "sisyphusAgent", "replacePlan", checked)}
                 >
                   Replace default plan
                 </Switch>

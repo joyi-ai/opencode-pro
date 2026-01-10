@@ -43,7 +43,9 @@ export namespace McpSync {
   }
 
   async function readJson(filepath: string): Promise<Record<string, unknown>> {
-    const text = await Bun.file(filepath).text().catch(() => undefined)
+    const text = await Bun.file(filepath)
+      .text()
+      .catch(() => undefined)
     if (!text) return {}
     const parsed = await Promise.resolve()
       .then(() => JSON.parse(text) as unknown)
@@ -91,11 +93,7 @@ export namespace McpSync {
     return result
   }
 
-  async function updateSettings(
-    filepath: string,
-    servers: Record<string, ExternalServer>,
-    remove: string[],
-  ) {
+  async function updateSettings(filepath: string, servers: Record<string, ExternalServer>, remove: string[]) {
     const data = await readJson(filepath)
     const existing = readRecord(data.mcpServers)
     const next = { ...existing }

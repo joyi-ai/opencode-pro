@@ -80,7 +80,13 @@ function createTerminalContext(paneId?: string | Accessor<string | undefined>) {
     return ready()
   }
 
-  return createTerminalMethods(sdk, () => currentEntry(), updateEntry, isReady, () => getPaneId() ?? key())
+  return createTerminalMethods(
+    sdk,
+    () => currentEntry(),
+    updateEntry,
+    isReady,
+    () => getPaneId() ?? key(),
+  )
 }
 
 function createTerminalMethods(
@@ -150,21 +156,18 @@ function createTerminalMethods(
           return undefined
         })
       if (!clone?.data) return
-      updateEntry(
-        (entry) => {
-          const nextAll = entry.all.slice()
-          nextAll[index] = {
-            ...pty,
-            ...clone.data,
-          }
-          return {
-            ...entry,
-            all: nextAll,
-            active: entry.active === pty.id ? clone.data.id : entry.active,
-          }
-        },
-        targetKey,
-      )
+      updateEntry((entry) => {
+        const nextAll = entry.all.slice()
+        nextAll[index] = {
+          ...pty,
+          ...clone.data,
+        }
+        return {
+          ...entry,
+          all: nextAll,
+          active: entry.active === pty.id ? clone.data.id : entry.active,
+        }
+      }, targetKey)
     },
     open(id: string) {
       updateEntry((entry) => ({ ...entry, active: id }))

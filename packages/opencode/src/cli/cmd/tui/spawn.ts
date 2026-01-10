@@ -23,13 +23,7 @@ export const TuiSpawnCommand = cmd({
     if (bin.endsWith("bun") || bin.endsWith("bun.exe")) {
       const indexPath = fileURLToPath(new URL("../../../index.ts", import.meta.url))
       const cwdPath = fileURLToPath(new URL("../../../../", import.meta.url))
-      cmd.push(
-        process.execPath,
-        "run",
-        "--conditions",
-        "browser",
-        indexPath,
-      )
+      cmd.push(process.execPath, "run", "--conditions", "browser", indexPath)
       cwd = cwdPath
     } else cmd.push(process.execPath)
     cmd.push("attach", server.url.toString(), "--dir", args.project ? path.resolve(args.project) : process.cwd())

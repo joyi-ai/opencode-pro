@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { BUILTIN_MODES, DEFAULT_MODE_ID, filterAgents, isAvailable, missingPlugins } from "../../../src/cli/cmd/tui/mode"
+import {
+  BUILTIN_MODES,
+  DEFAULT_MODE_ID,
+  filterAgents,
+  isAvailable,
+  missingPlugins,
+} from "../../../src/cli/cmd/tui/mode"
 
 describe("tui modes", () => {
   test("includes default mode", () => {
@@ -53,4 +59,3 @@ describe("tui modes", () => {
     expect(filtered.map((a) => a.name)).toEqual(["Sisyphus", "Planner-Sisyphus"])
   })
 })
-

@@ -40,7 +40,7 @@ export function DialogConnectProvider(props: { provider: string }) {
   const iconId = createMemo(() => (props.provider === "codex" ? "openai" : props.provider))
   const isConnected = createMemo(() => providers.connected().some((p) => p.id === props.provider))
   const supportsRouting = createMemo(() => props.provider === "openrouter" || props.provider === "vercel")
-  
+
   // Fetch existing routing settings for this provider
   const [routingSettings, { refetch: refetchRouting }] = createResource(
     () => (supportsRouting() ? props.provider : null),
@@ -187,8 +187,8 @@ export function DialogConnectProvider(props: { provider: string }) {
 
   return (
     <Dialog title={<IconButton tabIndex={-1} icon="arrow-left" variant="ghost" onClick={goBack} />}>
-        <div class="flex flex-col gap-6 px-2.5 pb-3">
-          <div class="px-2.5 flex gap-4 items-center">
+      <div class="flex flex-col gap-6 px-2.5 pb-3">
+        <div class="px-2.5 flex gap-4 items-center">
           <ProviderIcon id={iconId() as IconName} class="size-5 shrink-0 icon-strong-base" />
           <div class="text-16-medium text-text-strong">
             <Switch>
@@ -297,7 +297,8 @@ export function DialogConnectProvider(props: { provider: string }) {
                       </Match>
                       <Match when={hasExistingKey()}>
                         <div class="text-14-regular text-text-base">
-                          {provider().name} is already connected. You can update your API key below or keep using the existing one.
+                          {provider().name} is already connected. You can update your API key below or keep using the
+                          existing one.
                         </div>
                       </Match>
                       <Match when={true}>
@@ -323,11 +324,23 @@ export function DialogConnectProvider(props: { provider: string }) {
                         />
                       </div>
                       <div class="flex items-center gap-3">
-                        <Button class="w-auto" type="submit" size="large" variant="primary" disabled={!!(hasExistingKey() && !formStore.value)}>
+                        <Button
+                          class="w-auto"
+                          type="submit"
+                          size="large"
+                          variant="primary"
+                          disabled={!!(hasExistingKey() && !formStore.value)}
+                        >
                           {hasExistingKey() ? "Update" : "Submit"}
                         </Button>
                         <Show when={hasExistingKey() && !formStore.value}>
-                          <Button class="w-auto" type="button" size="large" variant="ghost" onClick={() => dialog.close()}>
+                          <Button
+                            class="w-auto"
+                            type="button"
+                            size="large"
+                            variant="ghost"
+                            onClick={() => dialog.close()}
+                          >
                             Keep existing
                           </Button>
                         </Show>
@@ -470,9 +483,7 @@ export function DialogConnectProvider(props: { provider: string }) {
 
                               {/* Add provider dropdown */}
                               <div class="flex flex-wrap gap-1 pt-1">
-                                <For
-                                  each={availableProviders().filter((p) => !routingStore.order.includes(p))}
-                                >
+                                <For each={availableProviders().filter((p) => !routingStore.order.includes(p))}>
                                   {(name) => (
                                     <button
                                       type="button"

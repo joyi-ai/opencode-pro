@@ -180,18 +180,12 @@ export namespace ClaudePluginHooks {
   }
 
   // Events that should be skipped for sub-sessions
-  const SUB_SESSION_SKIP_EVENTS: ClaudePluginSchema.HookEvent[] = [
-    "UserPromptSubmit",
-    "Stop",
-  ]
+  const SUB_SESSION_SKIP_EVENTS: ClaudePluginSchema.HookEvent[] = ["UserPromptSubmit", "Stop"]
 
   /**
    * Trigger all hooks for an event
    */
-  export async function trigger(
-    event: ClaudePluginSchema.HookEvent,
-    context: HookContext,
-  ): Promise<HookResult[]> {
+  export async function trigger(event: ClaudePluginSchema.HookEvent, context: HookContext): Promise<HookResult[]> {
     // Skip certain hooks for sub-sessions (child agents)
     if (isSubSession(context) && SUB_SESSION_SKIP_EVENTS.includes(event)) {
       log.info("skipping hooks for sub-session", { event, parentSessionId: context.parentSessionId })
@@ -290,13 +284,8 @@ export namespace ClaudePluginHooks {
   /**
    * Build stdin JSON data for a hook based on event type
    */
-  function buildStdinData(
-    event: ClaudePluginSchema.HookEvent,
-    context: HookContext,
-  ): Record<string, unknown> {
-    const transcriptPath = context.sessionID
-      ? ClaudePluginTranscript.getPath(context.sessionID)
-      : ""
+  function buildStdinData(event: ClaudePluginSchema.HookEvent, context: HookContext): Record<string, unknown> {
+    const transcriptPath = context.sessionID ? ClaudePluginTranscript.getPath(context.sessionID) : ""
 
     const base = {
       session_id: context.sessionID ?? "",
@@ -385,12 +374,7 @@ export namespace ClaudePluginHooks {
   /**
    * Parse hook output based on exit code and stdout
    */
-  function parseHookOutput(
-    exitCode: number,
-    stdout: string,
-    stderr: string,
-    duration: number,
-  ): HookResult {
+  function parseHookOutput(exitCode: number, stdout: string, stderr: string, duration: number): HookResult {
     // Exit code semantics:
     // Exit 2 = deny
     // Exit 1 = ask
@@ -470,9 +454,7 @@ export namespace ClaudePluginHooks {
           injectPrompt = hookOutput.inject_prompt
         }
         if ("updatedInput" in hookOutput && hookOutput.updatedInput) {
-          updatedInput = ClaudePluginTransform.objectToCamelCase(
-            hookOutput.updatedInput,
-          ) as Record<string, unknown>
+          updatedInput = ClaudePluginTransform.objectToCamelCase(hookOutput.updatedInput) as Record<string, unknown>
         }
         if ("permissionDecisionReason" in hookOutput) {
           // Use hook-specific reason if available
@@ -484,9 +466,8 @@ export namespace ClaudePluginHooks {
         output: trimmed,
         decision,
         reason:
-          (hookOutput && "permissionDecisionReason" in hookOutput
-            ? hookOutput.permissionDecisionReason
-            : undefined) ?? parsed.reason,
+          (hookOutput && "permissionDecisionReason" in hookOutput ? hookOutput.permissionDecisionReason : undefined) ??
+          parsed.reason,
         updatedInput,
         systemMessage: parsed.systemMessage,
         suppressOutput: parsed.suppressOutput,
@@ -596,11 +577,7 @@ export namespace ClaudePluginHooks {
   /**
    * Execute a prompt hook (returns prompt text for LLM evaluation)
    */
-  function executePromptHook(
-    hook: ClaudePluginLoader.LoadedHook,
-    context: HookContext,
-    startTime: number,
-  ): HookResult {
+  function executePromptHook(hook: ClaudePluginLoader.LoadedHook, context: HookContext, startTime: number): HookResult {
     if (!hook.prompt) {
       return {
         success: false,
@@ -630,11 +607,7 @@ export namespace ClaudePluginHooks {
    * Execute an agent hook (spawns a sub-agent)
    * Note: Full agent spawning requires session integration
    */
-  function executeAgentHook(
-    hook: ClaudePluginLoader.LoadedHook,
-    context: HookContext,
-    startTime: number,
-  ): HookResult {
+  function executeAgentHook(hook: ClaudePluginLoader.LoadedHook, context: HookContext, startTime: number): HookResult {
     log.info("agent hook executed", {
       pluginId: hook.pluginId,
       event: hook.event,

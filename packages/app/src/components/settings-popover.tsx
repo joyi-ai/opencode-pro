@@ -24,10 +24,14 @@ export const SettingsPopover: Component = () => {
   const voice = useVoice()
   const platform = usePlatform()
 
-  const { isCapturing: isCapturingKeybind, setIsCapturing: setIsCapturingKeybind, setCapturedKeybind, handleKeyDown: handleKeybindKeyDown } =
-    useKeybindCapture(voice.settings.keybind(), {
-      onCapture: (keybind) => voice.settings.setKeybind(keybind),
-    })
+  const {
+    isCapturing: isCapturingKeybind,
+    setIsCapturing: setIsCapturingKeybind,
+    setCapturedKeybind,
+    handleKeyDown: handleKeybindKeyDown,
+  } = useKeybindCapture(voice.settings.keybind(), {
+    onCapture: (keybind) => voice.settings.setKeybind(keybind),
+  })
 
   const sessionID = () => params.id
   const isGitProject = createMemo(() => sync.data.vcs !== undefined)
@@ -55,10 +59,7 @@ export const SettingsPopover: Component = () => {
         <Show when={isGitProject()}>
           <div class="flex flex-col gap-2">
             <div class="text-12-medium text-text-strong">New Sessions</div>
-            <Switch
-              checked={layout.worktree.enabled()}
-              onChange={(checked) => layout.worktree.setEnabled(checked)}
-            >
+            <Switch checked={layout.worktree.enabled()} onChange={(checked) => layout.worktree.setEnabled(checked)}>
               Enable worktree isolation
             </Switch>
             <Show when={layout.worktree.enabled()}>
@@ -193,10 +194,7 @@ export const SettingsPopover: Component = () => {
                   onKeyDown={handleKeybindKeyDown}
                   onBlur={() => setIsCapturingKeybind(false)}
                 >
-                  <Show
-                    when={!isCapturingKeybind()}
-                    fallback={<span class="text-text-subtle">Press keys...</span>}
-                  >
+                  <Show when={!isCapturingKeybind()} fallback={<span class="text-text-subtle">Press keys...</span>}>
                     {formatKeybind(voice.settings.keybind())}
                   </Show>
                 </button>
@@ -211,7 +209,8 @@ export const SettingsPopover: Component = () => {
                     class="px-2 py-1 rounded text-12-regular"
                     classList={{
                       "bg-surface-info-base/20 text-text-info-base": voice.settings.mode() === "toggle",
-                      "bg-surface-raised-base text-text-subtle hover:text-text-base": voice.settings.mode() !== "toggle",
+                      "bg-surface-raised-base text-text-subtle hover:text-text-base":
+                        voice.settings.mode() !== "toggle",
                     }}
                     onClick={() => voice.settings.setMode("toggle")}
                   >
@@ -222,7 +221,8 @@ export const SettingsPopover: Component = () => {
                     class="px-2 py-1 rounded text-12-regular"
                     classList={{
                       "bg-surface-info-base/20 text-text-info-base": voice.settings.mode() === "push-to-talk",
-                      "bg-surface-raised-base text-text-subtle hover:text-text-base": voice.settings.mode() !== "push-to-talk",
+                      "bg-surface-raised-base text-text-subtle hover:text-text-base":
+                        voice.settings.mode() !== "push-to-talk",
                     }}
                     onClick={() => voice.settings.setMode("push-to-talk")}
                   >

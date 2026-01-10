@@ -1,5 +1,18 @@
 import { useFilteredList } from "@opencode-ai/ui/hooks"
-import { createEffect, on, Component, Show, For, onMount, onCleanup, Switch, Match, createMemo, createSignal, createResource } from "solid-js"
+import {
+  createEffect,
+  on,
+  Component,
+  Show,
+  For,
+  onMount,
+  onCleanup,
+  Switch,
+  Match,
+  createMemo,
+  createSignal,
+  createResource,
+} from "solid-js"
 import { createStore, produce } from "solid-js/store"
 import { createFocusSignal } from "@solid-primitives/active-element"
 import { useLocal } from "@/context/local"
@@ -485,7 +498,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     ),
   )
 
-// Auto-scroll active command into view when navigating with keyboard
+  // Auto-scroll active command into view when navigating with keyboard
   createEffect(() => {
     const activeId = slashActive()
     if (!activeId || !slashPopoverRef) return
@@ -495,7 +508,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       element?.scrollIntoView({ block: "nearest", behavior: "smooth" })
     })
   })
-          
+
   createEffect(
     on(
       () => prompt.current(),
@@ -1763,7 +1776,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                         const existingText = textParts.map((p) => p.content).join("")
                         const newContent = existingText ? `${existingText} ${text}` : text
                         // Create new prompt with the text
-                        const newPrompt = [{ type: "text" as const, content: newContent, start: 0, end: newContent.length }]
+                        const newPrompt = [
+                          { type: "text" as const, content: newContent, start: 0, end: newContent.length },
+                        ]
                         prompt.set(newPrompt, newContent.length)
                         // Update editor display
                         editorRef.textContent = newContent

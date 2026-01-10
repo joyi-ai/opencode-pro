@@ -215,11 +215,7 @@ export namespace ClaudePluginLoader {
     }
   }
 
-  async function loadAgent(
-    filePath: string,
-    pluginId: string,
-    pluginName: string,
-  ): Promise<LoadedAgent | undefined> {
+  async function loadAgent(filePath: string, pluginId: string, pluginName: string): Promise<LoadedAgent | undefined> {
     const md = await ConfigMarkdown.parse(filePath).catch((e) => {
       log.warn("failed to parse agent", { path: filePath, error: e.message })
       return undefined
@@ -250,11 +246,7 @@ export namespace ClaudePluginLoader {
     }
   }
 
-  async function loadSkill(
-    filePath: string,
-    pluginId: string,
-    pluginName: string,
-  ): Promise<LoadedSkill | undefined> {
+  async function loadSkill(filePath: string, pluginId: string, pluginName: string): Promise<LoadedSkill | undefined> {
     const md = await ConfigMarkdown.parse(filePath).catch((e) => {
       log.warn("failed to parse skill", { path: filePath, error: e.message })
       return undefined
@@ -330,11 +322,7 @@ export namespace ClaudePluginLoader {
     return result
   }
 
-  async function loadMcp(
-    pluginPath: string,
-    pluginId: string,
-    pluginName: string,
-  ): Promise<LoadedMcp[]> {
+  async function loadMcp(pluginPath: string, pluginId: string, pluginName: string): Promise<LoadedMcp[]> {
     const mcpPath = path.join(pluginPath, ".mcp.json")
     const mcpText = await Bun.file(mcpPath)
       .text()
@@ -363,10 +351,7 @@ export namespace ClaudePluginLoader {
         args: config.args?.map((arg) => arg.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginPath)),
         env: config.env
           ? Object.fromEntries(
-              Object.entries(config.env).map(([k, v]) => [
-                k,
-                v.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginPath),
-              ]),
+              Object.entries(config.env).map(([k, v]) => [k, v.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginPath)]),
             )
           : undefined,
         url: config.url,
@@ -385,11 +370,7 @@ export namespace ClaudePluginLoader {
     return result
   }
 
-  async function loadLsp(
-    pluginPath: string,
-    pluginId: string,
-    pluginName: string,
-  ): Promise<LoadedLsp[]> {
+  async function loadLsp(pluginPath: string, pluginId: string, pluginName: string): Promise<LoadedLsp[]> {
     const lspPath = path.join(pluginPath, ".lsp.json")
     const lspText = await Bun.file(lspPath)
       .text()

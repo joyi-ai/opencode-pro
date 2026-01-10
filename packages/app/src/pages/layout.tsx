@@ -330,7 +330,6 @@ export default function Layout(props: ParentProps) {
       .toSorted(sortSessions)
     return sessions.filter((s) => !s.parentID && !s.time?.archived)
   }
-  }
 
   const currentSessions = createMemo(() => projectSessions(currentProject()))
 
@@ -1057,9 +1056,7 @@ export default function Layout(props: ParentProps) {
     const sortable = createSortable(props.project.worktree)
     const showExpanded = createMemo(() => props.mobile || layout.sidebar.opened())
     const slug = createMemo(() => base64Encode(props.project.worktree))
-    const newSessionHref = createMemo(
-      () => `/multi?dir=${encodeURIComponent(props.project.worktree)}`,
-    )
+    const newSessionHref = createMemo(() => `/multi?dir=${encodeURIComponent(props.project.worktree)}`)
     const name = createMemo(() => props.project.name || truncateDirectoryPrefix(props.project.worktree))
     const [store, setProjectStore] = globalSync.child(props.project.worktree)
     const sessions = createMemo(() => store.session.toSorted(sortSessions))

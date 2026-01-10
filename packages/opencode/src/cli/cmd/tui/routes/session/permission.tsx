@@ -169,7 +169,6 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             sdk.client.permission.reply({
               reply: "reject",
               requestID: props.request.id,
-              message: message || undefined,
             })
           }}
           onCancel={() => setStore("stage", "permission")}

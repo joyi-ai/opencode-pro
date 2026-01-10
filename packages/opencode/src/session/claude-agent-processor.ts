@@ -172,8 +172,7 @@ export namespace ClaudeAgentProcessor {
     sessionID: string,
   ): AsyncIterable<SDKUserMessage> {
     const content: Array<
-      | { type: "text"; text: string }
-      | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
+      { type: "text"; text: string } | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
     > = []
 
     // Add image blocks first
@@ -214,9 +213,7 @@ export namespace ClaudeAgentProcessor {
     if (!permission || permission.length === 0) return "default"
 
     // Check if all tools are allowed
-    const hasAllowAll = permission.some(
-      (r) => r.permission === "*" && r.pattern === "*" && r.action === "allow",
-    )
+    const hasAllowAll = permission.some((r) => r.permission === "*" && r.pattern === "*" && r.action === "allow")
     if (hasAllowAll) return "bypassPermissions"
 
     // Check if edits are auto-approved
@@ -317,10 +314,7 @@ export namespace ClaudeAgentProcessor {
   /**
    * Process a streaming message from Claude Agent SDK
    */
-  async function processMessage(
-    msg: SDKMessage,
-    ctx: ProcessContext,
-  ): Promise<void> {
+  async function processMessage(msg: SDKMessage, ctx: ProcessContext): Promise<void> {
     switch (msg.type) {
       case "system":
         if (msg.subtype === "init") {

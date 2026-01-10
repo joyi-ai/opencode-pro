@@ -110,12 +110,9 @@ export namespace CodexProvider {
       if (!id) continue
       const name = resolveModelName(record, id)
       const efforts = readEfforts(record.supportedReasoningEfforts ?? record.supported_reasoning_efforts)
-      const supported = efforts.length > 0
-        ? sortEfforts(Array.from(new Set(efforts)))
-        : sortEfforts(["low", "medium", "high"])
-      const variants = Object.fromEntries(
-        supported.map((effort) => [effort, { reasoningEffort: effort }]),
-      )
+      const supported =
+        efforts.length > 0 ? sortEfforts(Array.from(new Set(efforts))) : sortEfforts(["low", "medium", "high"])
+      const variants = Object.fromEntries(supported.map((effort) => [effort, { reasoningEffort: effort }]))
       models[id] = {
         id,
         providerID: PROVIDER_ID,

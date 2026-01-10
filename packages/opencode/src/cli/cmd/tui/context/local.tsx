@@ -302,7 +302,11 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const currentModel = createMemo(() => {
         const a = agent.current()
         if (!a) return
-        return getFirstValidModel(() => modelStore.model[a.name], () => a.model, fallbackModel)
+        return getFirstValidModel(
+          () => modelStore.model[a.name],
+          () => a.model,
+          fallbackModel,
+        )
       })
 
       return {
@@ -489,16 +493,19 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     }
 
     createEffect(
-      on(() => mode.current().id, () => {
-        const available = agent.list()
-        if (available.length === 0) return
-        const preferred = mode.current().defaultAgent
-        if (preferred && available.some((item) => item.name === preferred)) {
-          agent.set(preferred)
-          return
-        }
-        agent.set(available[0].name)
-      }),
+      on(
+        () => mode.current().id,
+        () => {
+          const available = agent.list()
+          if (available.length === 0) return
+          const preferred = mode.current().defaultAgent
+          if (preferred && available.some((item) => item.name === preferred)) {
+            agent.set(preferred)
+            return
+          }
+          agent.set(available[0].name)
+        },
+      ),
     )
 
     createEffect(() => {

@@ -17,9 +17,7 @@ export function DialogSelectFile(props: DialogSelectFileProps) {
   const file = useFile()
   const dialog = useDialog()
   const params = useParams()
-  const sessionKey = createMemo(
-    () => props.sessionKey ?? `${params.dir}${params.id ? "/" + params.id : ""}`,
-  )
+  const sessionKey = createMemo(() => props.sessionKey ?? `${params.dir}${params.id ? "/" + params.id : ""}`)
   const tabs = createMemo(() => layout.tabs(sessionKey()))
   const view = createMemo(() => layout.view(sessionKey()))
   return (

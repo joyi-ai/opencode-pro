@@ -1,5 +1,5 @@
 import { batch, createMemo } from "solid-js"
-import { createStore, produce, reconcile } from "solid-js/store"
+import { createStore, produce, reconcile, type SetStoreFunction } from "solid-js/store"
 import { Binary } from "@opencode-ai/util/binary"
 import { retry } from "@opencode-ai/util/retry"
 import { createSimpleContext } from "@opencode-ai/ui/context"
@@ -12,9 +12,14 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   init: () => {
     const globalSync = useGlobalSync()
     const sdk = useSDK()
-    const child = createMemo(() => globalSync.child(sdk.directory))
+    type ChildState = ReturnType<typeof globalSync.child>
+    type ChildStore = ChildState[0]
+    const child = createMemo<ChildState>(() => globalSync.child(sdk.directory))
     const store = createMemo(() => child()[0])
-    const setStore = (...args: [any, ...any[]]) => (child()[1] as (...args: any[]) => void)(...args)
+    const setStore = ((...args: any[]) => {
+      const setter = child()[1] as (...args: any[]) => void
+      return setter(...args)
+    }) as SetStoreFunction<ChildStore>
     const absolute = (path: string) => (store().path.directory + "/" + path).replace("//", "/")
     const chunk = 200
     const inflight = new Map<string, Promise<void>>()
@@ -26,14 +31,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       loading: {} as Record<string, boolean>,
     })
 
-    type SetState = ReturnType<typeof child>[1]
+    type SetState = SetStoreFunction<ChildStore>
 
-    const mergeMessages = (
-      setTarget: SetState,
-      sessionID: string,
-      items: Message[],
-      options?: { prune?: boolean },
-    ) => {
+    const mergeMessages = (setTarget: SetState, sessionID: string, items: Message[], options?: { prune?: boolean }) => {
       const prune = options?.prune ?? false
       if (!prune) {
         if (items.length === 0) return
@@ -223,7 +223,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
                 if (!data) return
                 setStore(
                   "session",
-                  produce((draft) => {
+                  produce<ChildStore["session"]>((draft) => {
                     const match = Binary.search(draft, sessionID, (s) => s.id)
                     if (match.found) {
                       draft[match.index] = data

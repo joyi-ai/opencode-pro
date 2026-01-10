@@ -11,7 +11,9 @@
   fill: var(--surface-raised-base);
   stroke: var(--border-weak-base);
   stroke-width: 1;
-  transition: fill 0.1s ease-out, stroke 0.1s ease-out;
+  transition:
+    fill 0.1s ease-out,
+    stroke 0.1s ease-out;
 
   &[data-highlighted="true"] {
     fill: var(--surface-raised-base-hover);

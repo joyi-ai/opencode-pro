@@ -78,10 +78,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       if (!override) return base
 
       const providerOverride =
-        override.providerOverride === null
-          ? undefined
-          : override.providerOverride ?? base.providerOverride
-      const defaultAgent = override.defaultAgent === null ? undefined : override.defaultAgent ?? base.defaultAgent
+        override.providerOverride === null ? undefined : (override.providerOverride ?? base.providerOverride)
+      const defaultAgent = override.defaultAgent === null ? undefined : (override.defaultAgent ?? base.defaultAgent)
       const mergedOverrides =
         base.overrides || override.overrides ? { ...(base.overrides ?? {}), ...(override.overrides ?? {}) } : undefined
 
@@ -425,10 +423,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (provider) {
             const modelID = providers.default()[providerOverride] ?? Object.keys(provider.models)[0]
             if (modelID) {
-            return {
-              providerID: providerOverride,
-              modelID,
-            }
+              return {
+                providerID: providerOverride,
+                modelID,
+              }
             }
           }
         }
@@ -499,8 +497,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         cycle,
         set(model: ModelKey | undefined, options?: { recent?: boolean }) {
           const providerOverride = mode.providerOverride()
-          const nextModel =
-            model && providerOverride && model.providerID !== providerOverride ? undefined : model
+          const nextModel = model && providerOverride && model.providerID !== providerOverride ? undefined : model
           batch(() => {
             const currentAgent = agent.current()
             if (currentAgent) setEphemeral("model", currentAgent.name, nextModel ?? fallbackModel())

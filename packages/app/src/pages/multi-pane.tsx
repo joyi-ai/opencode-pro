@@ -37,9 +37,7 @@ function PaneSyncedProviders(props: { paneId: string; directory: string; childre
       <LocalProvider>
         <TerminalProvider paneId={props.paneId}>
           <FileProvider>
-            <PromptProvider paneId={props.paneId}>
-              {props.children}
-            </PromptProvider>
+            <PromptProvider paneId={props.paneId}>{props.children}</PromptProvider>
           </FileProvider>
         </TerminalProvider>
       </LocalProvider>
@@ -75,15 +73,15 @@ function GlobalReviewSynced(props: { paneId: string; directory: string; sessionI
   const [activeDraggable, setActiveDraggable] = createSignal<string | undefined>(undefined)
 
   const sessionKey = createMemo(
-    () =>
-      `multi-${props.paneId}-${props.directory}${props.sessionId ? "/" + props.sessionId : ""}`,
+    () => `multi-${props.paneId}-${props.directory}${props.sessionId ? "/" + props.sessionId : ""}`,
   )
+  const view = createMemo(() => layout.view(sessionKey()))
   const tabs = createMemo(() => layout.tabs(sessionKey()))
   const contextOpen = createMemo(() => tabs().active() === "context" || tabs().all().includes("context"))
   const diffs = createMemo(() => (props.sessionId ? (sync.data.session_diff[props.sessionId] ?? []) : []))
   const sessionInfo = createMemo(() => (props.sessionId ? sync.session.get(props.sessionId) : undefined))
   const showReview = createMemo(
-    () => layout.review.opened() && (diffs().length > 0 || tabs().all().length > 0 || contextOpen()),
+    () => view().reviewPanel.opened() && (diffs().length > 0 || tabs().all().length > 0 || contextOpen()),
   )
 
   return (
@@ -119,11 +117,7 @@ function GlobalPromptWrapper() {
           {(directory) => (
             <SDKProvider directory={directory()}>
               <SyncProvider>
-                <GlobalPromptSynced
-                  paneId={pane().id}
-                  directory={directory()}
-                  sessionId={pane().sessionId}
-                />
+                <GlobalPromptSynced paneId={pane().id} directory={directory()} sessionId={pane().sessionId} />
               </SyncProvider>
             </SDKProvider>
           )}
@@ -144,11 +138,7 @@ function GlobalReviewWrapper() {
           {(directory) => (
             <SDKProvider directory={directory()}>
               <SyncProvider>
-                <GlobalReviewSynced
-                  paneId={pane().id}
-                  directory={directory()}
-                  sessionId={pane().sessionId}
-                />
+                <GlobalReviewSynced paneId={pane().id} directory={directory()} sessionId={pane().sessionId} />
               </SyncProvider>
             </SDKProvider>
           )}
@@ -292,10 +282,7 @@ function MultiPaneContent() {
   return (
     <div class="relative size-full flex flex-col bg-background-base overflow-hidden" style={{ isolation: "isolate" }}>
       <ShiftingGradient class="z-0" />
-      <div
-        class="absolute inset-0 pointer-events-none z-10"
-        style={backdropStyle()}
-      >
+      <div class="absolute inset-0 pointer-events-none z-10" style={backdropStyle()}>
         <div class="absolute inset-0" style={grainStyle()} />
       </div>
       <div class="relative z-20 flex-1 min-h-0 flex flex-col">
@@ -315,10 +302,7 @@ function MultiPaneContent() {
             </div>
           }
         >
-          <Show
-            when={layout.multiPane.view() === "grid"}
-            fallback={<MultiPaneKanbanView panes={visiblePanes()} />}
-          >
+          <Show when={layout.multiPane.view() === "grid"} fallback={<MultiPaneKanbanView panes={visiblePanes()} />}>
             <div class="flex-1 min-h-0 flex">
               <div class="flex-1 min-w-0 min-h-0 flex flex-col">
                 <DragDropProvider
@@ -336,11 +320,7 @@ function MultiPaneContent() {
                         <Show
                           when={state() === "session"}
                           fallback={
-                            <PaneHome
-                              paneId={pane.id}
-                              isFocused={isFocused}
-                              selectedProject={pane.directory}
-                            />
+                            <PaneHome paneId={pane.id} isFocused={isFocused} selectedProject={pane.directory} />
                           }
                         >
                           {(_) => (

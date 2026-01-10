@@ -134,7 +134,9 @@ export const { use: useMultiPane, provider: MultiPaneProvider } = createSimpleCo
         const nextLayout = calculateLayout(visibleCount + 1)
         const shouldInsertIntoExpansionSlot =
           visibleCount > 0 && nextLayout.rows === prevLayout.rows && nextLayout.columns > prevLayout.columns
-        const localInsertIndex = shouldInsertIntoExpansionSlot ? Math.min(prevLayout.columns, visibleCount) : visibleCount
+        const localInsertIndex = shouldInsertIntoExpansionSlot
+          ? Math.min(prevLayout.columns, visibleCount)
+          : visibleCount
 
         const nextPanes = [...store.panes]
         nextPanes.splice(pageStart + localInsertIndex, 0, pane)

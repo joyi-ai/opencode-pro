@@ -109,7 +109,7 @@ function StepsContainer(props: {
     return [parts[parts.length - 2], parts[parts.length - 1]]
   })
 
-  const hiddenCount = createMemo(() => props.expanded ? 0 : Math.max(0, props.toolParts.length - 2))
+  const hiddenCount = createMemo(() => (props.expanded ? 0 : Math.max(0, props.toolParts.length - 2)))
 
   return (
     <div data-component="steps-container" data-expanded={props.expanded}>
@@ -575,11 +575,7 @@ export function SessionTurn(
                         data-slot="session-turn-response-trigger"
                         data-disable-sticky={props.disableSticky || undefined}
                       >
-                        <Button
-                          data-slot="session-turn-collapsible-trigger-content"
-                          variant="ghost"
-                          size="small"
-                        >
+                        <Button data-slot="session-turn-collapsible-trigger-content" variant="ghost" size="small">
                           <Spinner />
                           <span>{store.status ?? "Considering next steps"}</span>
                           <span>·</span>

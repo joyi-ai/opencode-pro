@@ -4,10 +4,7 @@ import { Dialog } from "@opencode-ai/ui/dialog"
 import { Icon } from "@opencode-ai/ui/icon"
 import type { Session } from "@opencode-ai/sdk/v2"
 
-export function DialogWorktreeCleanup(props: {
-  session: Session
-  onConfirm: (removeWorktree: boolean) => void
-}) {
+export function DialogWorktreeCleanup(props: { session: Session; onConfirm: (removeWorktree: boolean) => void }) {
   const dialog = useDialog()
 
   function handleDelete() {
@@ -29,18 +26,14 @@ export function DialogWorktreeCleanup(props: {
           </div>
           <div class="flex flex-col gap-1">
             <div class="text-14-medium text-text-strong">Session has an active worktree</div>
-            <div class="text-13-regular text-text-base">
-              This session is using a git worktree at:
-            </div>
+            <div class="text-13-regular text-text-base">This session is using a git worktree at:</div>
             <div class="text-12-regular text-text-subtle break-all font-mono bg-surface-raised-base px-2 py-1 rounded mt-1">
               {(props.session as any).worktree?.path}
             </div>
           </div>
         </div>
 
-        <div class="text-13-regular text-text-base">
-          What would you like to do with the worktree?
-        </div>
+        <div class="text-13-regular text-text-base">What would you like to do with the worktree?</div>
 
         <div class="flex flex-col gap-2 pt-2 border-t border-border-base">
           <Button
@@ -52,21 +45,11 @@ export function DialogWorktreeCleanup(props: {
             <Icon name="close" size="small" />
             Delete worktree and archive session
           </Button>
-          <Button
-            variant="ghost"
-            size="large"
-            class="w-full justify-start gap-2"
-            onClick={handleKeep}
-          >
+          <Button variant="ghost" size="large" class="w-full justify-start gap-2" onClick={handleKeep}>
             <Icon name="folder" size="small" />
             Keep worktree and archive session
           </Button>
-          <Button
-            variant="ghost"
-            size="large"
-            class="w-full justify-start gap-2"
-            onClick={() => dialog.close()}
-          >
+          <Button variant="ghost" size="large" class="w-full justify-start gap-2" onClick={() => dialog.close()}>
             Cancel
           </Button>
         </div>

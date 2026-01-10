@@ -151,9 +151,7 @@ export namespace Cache {
     export function list(projectID: string): SessionRow[] {
       const db = get()
       return db
-        .query<SessionRow, [string]>(
-          `SELECT * FROM sessions WHERE projectID = ? ORDER BY updated_at DESC`,
-        )
+        .query<SessionRow, [string]>(`SELECT * FROM sessions WHERE projectID = ? ORDER BY updated_at DESC`)
         .all(projectID)
     }
 
@@ -297,9 +295,7 @@ export namespace Cache {
     export function list(sessionID: string): MessageRow[] {
       const db = get()
       return db
-        .query<MessageRow, [string]>(
-          `SELECT * FROM messages WHERE sessionID = ? ORDER BY created_at ASC`,
-        )
+        .query<MessageRow, [string]>(`SELECT * FROM messages WHERE sessionID = ? ORDER BY created_at ASC`)
         .all(sessionID)
     }
 
@@ -387,9 +383,7 @@ export namespace Cache {
      */
     export function read(key: string): string | null {
       const db = get()
-      const result = db
-        .query<{ value: string }, [string]>(`SELECT value FROM config WHERE key = ?`)
-        .get(key)
+      const result = db.query<{ value: string }, [string]>(`SELECT value FROM config WHERE key = ?`).get(key)
       return result?.value ?? null
     }
 
@@ -410,9 +404,7 @@ export namespace Cache {
      */
     export function loadedAt(key: string): number | null {
       const db = get()
-      const result = db
-        .query<{ loaded_at: number }, [string]>(`SELECT loaded_at FROM config WHERE key = ?`)
-        .get(key)
+      const result = db.query<{ loaded_at: number }, [string]>(`SELECT loaded_at FROM config WHERE key = ?`).get(key)
       return result?.loaded_at ?? null
     }
 
@@ -446,9 +438,10 @@ export namespace Cache {
     export function lastSync(entityType: string, entityId: string): number | null {
       const db = get()
       const result = db
-        .query<{ synced_at: number }, [string, string]>(
-          `SELECT synced_at FROM sync_meta WHERE entity_type = ? AND entity_id = ?`,
-        )
+        .query<
+          { synced_at: number },
+          [string, string]
+        >(`SELECT synced_at FROM sync_meta WHERE entity_type = ? AND entity_id = ?`)
         .get(entityType, entityId)
       return result?.synced_at ?? null
     }
@@ -459,9 +452,10 @@ export namespace Cache {
     export function needsSync(entityType: string, entityId: string, fileMtime: number): boolean {
       const db = get()
       const result = db
-        .query<{ file_mtime: number }, [string, string]>(
-          `SELECT file_mtime FROM sync_meta WHERE entity_type = ? AND entity_id = ?`,
-        )
+        .query<
+          { file_mtime: number },
+          [string, string]
+        >(`SELECT file_mtime FROM sync_meta WHERE entity_type = ? AND entity_id = ?`)
         .get(entityType, entityId)
       if (!result) return true
       return fileMtime > result.file_mtime

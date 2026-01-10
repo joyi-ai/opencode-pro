@@ -20,10 +20,7 @@ interface KeybindCaptureResult {
  * @param initialKeybind - Initial keybind value
  * @param options.onCapture - Optional callback when keybind is captured (for immediate save)
  */
-export function useKeybindCapture(
-  initialKeybind: string,
-  options?: KeybindCaptureOptions,
-): KeybindCaptureResult {
+export function useKeybindCapture(initialKeybind: string, options?: KeybindCaptureOptions): KeybindCaptureResult {
   const [isCapturing, setIsCapturing] = createSignal(false)
   const [capturedKeybind, setCapturedKeybind] = createSignal(initialKeybind)
 

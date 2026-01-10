@@ -37,10 +37,10 @@ export const DialogEditMcp: Component<{ name?: string; entry?: McpConfigured }> 
   const [store, setStore] = createStore({
     name: props.name ?? "",
     type: isLocalEntry ? "local" : "remote",
-    command: isLocalEntry ? entry?.command?.[0] ?? "" : "",
-    args: isLocalEntry ? entry?.command?.slice(1).join(" ") ?? "" : "",
+    command: isLocalEntry ? (entry?.command?.[0] ?? "") : "",
+    args: isLocalEntry ? (entry?.command?.slice(1).join(" ") ?? "") : "",
     env: isLocalEntry && entry?.environment ? JSON.stringify(entry.environment, null, 2) : "",
-    url: isRemoteEntry ? entry?.url ?? "" : "",
+    url: isRemoteEntry ? (entry?.url ?? "") : "",
     headers: isRemoteEntry && entry?.headers ? JSON.stringify(entry.headers, null, 2) : "",
     oauthDisabled: isRemoteEntry && entry?.oauth === false,
     oauthClientId: oauthConfig?.clientId ?? "",
@@ -53,9 +53,7 @@ export const DialogEditMcp: Component<{ name?: string; entry?: McpConfigured }> 
     { id: "local", label: "Local (command)" },
     { id: "remote", label: "Remote (URL)" },
   ]
-  const currentType = createMemo(
-    () => typeOptions.find((option) => option.id === store.type) ?? typeOptions[0],
-  )
+  const currentType = createMemo(() => typeOptions.find((option) => option.id === store.type) ?? typeOptions[0])
 
   const parseJsonRecord = async (value: string, label: string): Promise<JsonResult> => {
     const trimmed = value.trim()
@@ -199,12 +197,7 @@ export const DialogEditMcp: Component<{ name?: string; entry?: McpConfigured }> 
       scope: store.oauthScope.trim() || undefined,
     }
     const hasOauth = !!(oauthFields.clientId || oauthFields.clientSecret || oauthFields.scope)
-    const oauth =
-      store.oauthDisabled
-        ? { oauth: false as const }
-        : hasOauth
-          ? { oauth: oauthFields }
-          : {}
+    const oauth = store.oauthDisabled ? { oauth: false as const } : hasOauth ? { oauth: oauthFields } : {}
 
     const next: McpConfigured = {
       type: "remote",

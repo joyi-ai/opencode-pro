@@ -73,10 +73,7 @@ export function VoiceButton(props: VoiceButtonProps) {
         onClick={handleClick}
         disabled={voice.state.isTranscribing() || voice.state.modelStatus() === "downloading"}
       >
-        <Show
-          when={!voice.state.isTranscribing()}
-          fallback={<Spinner class="size-4.5" />}
-        >
+        <Show when={!voice.state.isTranscribing()} fallback={<Spinner class="size-4.5" />}>
           <Icon
             name={getIconName()}
             class="size-4.5"

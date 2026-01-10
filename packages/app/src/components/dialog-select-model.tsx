@@ -107,15 +107,19 @@ const ModelList: Component<{
       filterKeys={["provider.name", "name", "id"]}
       sortBy={props.showFavorites ? undefined : (a, b) => a.name.localeCompare(b.name)}
       groupBy={props.showFavorites ? undefined : (x) => x.provider.name}
-      sortGroupsBy={props.showFavorites ? undefined : (a, b) => {
-        if (a.category === "Recent" && b.category !== "Recent") return -1
-        if (b.category === "Recent" && a.category !== "Recent") return 1
-        const aProvider = a.items[0].provider.id
-        const bProvider = b.items[0].provider.id
-        if (popularProviders.includes(aProvider) && !popularProviders.includes(bProvider)) return -1
-        if (!popularProviders.includes(aProvider) && popularProviders.includes(bProvider)) return 1
-        return popularProviders.indexOf(aProvider) - popularProviders.indexOf(bProvider)
-      }}
+      sortGroupsBy={
+        props.showFavorites
+          ? undefined
+          : (a, b) => {
+              if (a.category === "Recent" && b.category !== "Recent") return -1
+              if (b.category === "Recent" && a.category !== "Recent") return 1
+              const aProvider = a.items[0].provider.id
+              const bProvider = b.items[0].provider.id
+              if (popularProviders.includes(aProvider) && !popularProviders.includes(bProvider)) return -1
+              if (!popularProviders.includes(aProvider) && popularProviders.includes(bProvider)) return 1
+              return popularProviders.indexOf(aProvider) - popularProviders.indexOf(bProvider)
+            }
+      }
       onSelect={(x) => {
         local.model.set(x ? { modelID: x.id, providerID: x.provider.id } : undefined, {
           recent: true,
@@ -294,10 +298,7 @@ export const DialogSelectModel: Component<{ provider?: string }> = (props) => {
             <span class="text-13-medium text-text-base">Extended Thinking</span>
             <span class="text-12-regular text-text-weak">Enable deeper reasoning</span>
           </div>
-          <Switch
-            checked={local.model.thinking.current()}
-            onChange={(checked) => local.model.thinking.set(checked)}
-          />
+          <Switch checked={local.model.thinking.current()} onChange={(checked) => local.model.thinking.set(checked)} />
         </div>
       </Dialog>
     )

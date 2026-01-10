@@ -92,9 +92,7 @@ export function HomeContent(props: HomeContentProps) {
   const marginTop = () => (props.variant === "page" ? "mt-20" : "mt-12")
   const emptyMarginTop = () => (props.variant === "page" ? "mt-30" : "mt-20")
   const showRelativeTime = createMemo(() => (props.showRelativeTime ?? true) && !props.hideLogo)
-  const showThemePicker = createMemo(
-    () => props.variant === "page" && props.showThemePicker === true,
-  )
+  const showThemePicker = createMemo(() => props.variant === "page" && props.showThemePicker === true)
   const isCompact = createMemo(() => props.variant === "page" && props.hideLogo)
   const otherProjects = createMemo(() => {
     const current = selectedProject()
@@ -104,9 +102,7 @@ export function HomeContent(props: HomeContentProps) {
   return (
     <Show
       when={sync.ready}
-      fallback={
-        <div class="size-full flex items-center justify-center text-text-weak">Loading...</div>
-      }
+      fallback={<div class="size-full flex items-center justify-center text-text-weak">Loading...</div>}
     >
       <div class="size-full flex flex-col relative">
         <div class="flex-1 flex flex-col items-center justify-center">
@@ -143,12 +139,7 @@ export function HomeContent(props: HomeContentProps) {
                         <div class="flex gap-2 items-center justify-between pl-3">
                           <div class="text-14-medium text-text-strong">Recent projects</div>
                           <div class="flex gap-2">
-                            <Button
-                              icon="folder-add-left"
-                              size="normal"
-                              class="pl-2 pr-3"
-                              onClick={chooseProject}
-                            >
+                            <Button icon="folder-add-left" size="normal" class="pl-2 pr-3" onClick={chooseProject}>
                               Open project
                             </Button>
                             <Show when={props.variant === "page"}>
@@ -174,23 +165,16 @@ export function HomeContent(props: HomeContentProps) {
                                   class="text-14-mono text-left justify-between px-3"
                                   onClick={() => selectProject(project.worktree)}
                                 >
-                                  <span
-                                    class="truncate"
-                                    classList={{ "text-text-accent-base": isSelected() }}
-                                  >
+                                  <span class="truncate" classList={{ "text-text-accent-base": isSelected() }}>
                                     {project.worktree.replace(homedir(), "~")}
                                   </span>
                                   <Show when={isSelected()}>
-                                    <span class="text-11-regular text-text-accent-base shrink-0 ml-2">
-                                      selected
-                                    </span>
+                                    <span class="text-11-regular text-text-accent-base shrink-0 ml-2">selected</span>
                                   </Show>
                                   <Show when={!isSelected()}>
                                     <Show when={showRelativeTime()}>
                                       <span class="text-14-regular text-text-weak">
-                                        {DateTime.fromMillis(
-                                          project.time.updated ?? project.time.created,
-                                        ).toRelative()}
+                                        {DateTime.fromMillis(project.time.updated ?? project.time.created).toRelative()}
                                       </span>
                                     </Show>
                                   </Show>
@@ -206,9 +190,7 @@ export function HomeContent(props: HomeContentProps) {
                         <Icon name="folder-add-left" size="large" />
                         <div class="flex flex-col gap-1 items-center justify-center">
                           <div class="text-14-medium text-text-strong">No recent projects</div>
-                          <div class="text-12-regular text-text-weak">
-                            Get started by opening a local project
-                          </div>
+                          <div class="text-12-regular text-text-weak">Get started by opening a local project</div>
                         </div>
                         <div />
                         <div class="flex gap-2">
@@ -240,9 +222,7 @@ export function HomeContent(props: HomeContentProps) {
                           onClick={chooseProject}
                         />
                         <div class="min-w-0 text-14-mono text-text-strong truncate">
-                          {selectedProject()
-                            ? selectedProject()!.replace(homedir(), "~")
-                            : "Select a project"}
+                          {selectedProject() ? selectedProject()!.replace(homedir(), "~") : "Select a project"}
                         </div>
                       </div>
                       <Show when={otherProjects().length > 0}>
@@ -269,9 +249,7 @@ export function HomeContent(props: HomeContentProps) {
                                 setShowMore(false)
                               }}
                             >
-                              <span class="truncate">
-                                {project.worktree.replace(homedir(), "~")}
-                              </span>
+                              <span class="truncate">{project.worktree.replace(homedir(), "~")}</span>
                             </Button>
                           )}
                         </For>

@@ -54,6 +54,12 @@ export function SessionPaneHeader(props: SessionPaneHeaderProps) {
   const shareEnabled = createMemo(() => sync.data.config.share !== "disabled")
   const branch = createMemo(() => sync.data.vcs?.branch)
   const focused = createMemo(() => props.isFocused?.() ?? true)
+  const sessionKey = createMemo(() =>
+    props.mode === "multi"
+      ? `multi-${props.paneId ?? "pane"}-${props.directory}${props.sessionId ? "/" + props.sessionId : ""}`
+      : `${params.dir}${props.sessionId ? "/" + props.sessionId : ""}`,
+  )
+  const view = createMemo(() => layout.view(sessionKey()))
 
   function navigateToProject(directory: string | undefined) {
     if (!directory) return
@@ -100,10 +106,7 @@ export function SessionPaneHeader(props: SessionPaneHeaderProps) {
   // Single mode header (full featured)
   if (props.mode === "single") {
     return (
-      <header
-        class="h-12 shrink-0 bg-background-base border-b border-border-weak-base flex"
-        data-tauri-drag-region
-      >
+      <header class="h-12 shrink-0 bg-background-base border-b border-border-weak-base flex" data-tauri-drag-region>
         <button
           type="button"
           class="xl:hidden w-12 shrink-0 flex items-center justify-center border-r border-border-weak-base hover:bg-surface-raised-base-hover active:bg-surface-raised-base-active transition-colors"
@@ -149,11 +152,7 @@ export function SessionPaneHeader(props: SessionPaneHeaderProps) {
               />
             </div>
             <Show when={currentSession()}>
-              <TooltipKeybind
-                class="hidden xl:block"
-                title="New session"
-                keybind={command.keybind("session.new")}
-              >
+              <TooltipKeybind class="hidden xl:block" title="New session" keybind={command.keybind("session.new")}>
                 <IconButton as={A} href={`/${params.dir}/session`} icon="edit-small-2" variant="ghost" />
               </TooltipKeybind>
             </Show>
@@ -188,20 +187,20 @@ export function SessionPaneHeader(props: SessionPaneHeaderProps) {
                   title="Toggle review"
                   keybind={command.keybind("review.toggle")}
                 >
-                  <Button variant="ghost" class="group/review-toggle size-6 p-0" onClick={layout.review.toggle}>
+                  <Button variant="ghost" class="group/review-toggle size-6 p-0" onClick={view().reviewPanel.toggle}>
                     <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
                       <Icon
-                        name={layout.review.opened() ? "layout-right" : "layout-left"}
+                        name={view().reviewPanel.opened() ? "layout-right" : "layout-left"}
                         size="small"
                         class="group-hover/review-toggle:hidden"
                       />
                       <Icon
-                        name={layout.review.opened() ? "layout-right-partial" : "layout-left-partial"}
+                        name={view().reviewPanel.opened() ? "layout-right-partial" : "layout-left-partial"}
                         size="small"
                         class="hidden group-hover/review-toggle:inline-block"
                       />
                       <Icon
-                        name={layout.review.opened() ? "layout-right-full" : "layout-left-full"}
+                        name={view().reviewPanel.opened() ? "layout-right-full" : "layout-left-full"}
                         size="small"
                         class="hidden group-active/review-toggle:inline-block"
                       />
@@ -214,17 +213,21 @@ export function SessionPaneHeader(props: SessionPaneHeaderProps) {
                 title="Toggle terminal"
                 keybind={command.keybind("terminal.toggle")}
               >
-                <Button variant="ghost" class="group/terminal-toggle size-6 p-0" onClick={layout.terminal.toggle}>
+                <Button variant="ghost" class="group/terminal-toggle size-6 p-0" onClick={view().terminal.toggle}>
                   <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
                     <Icon
                       size="small"
-                      name={layout.terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
+                      name={view().terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
                       class="group-hover/terminal-toggle:hidden"
                     />
-                    <Icon size="small" name="layout-bottom-partial" class="hidden group-hover/terminal-toggle:inline-block" />
                     <Icon
                       size="small"
-                      name={layout.terminal.opened() ? "layout-bottom" : "layout-bottom-full"}
+                      name="layout-bottom-partial"
+                      class="hidden group-hover/terminal-toggle:inline-block"
+                    />
+                    <Icon
+                      size="small"
+                      name={view().terminal.opened() ? "layout-bottom" : "layout-bottom-full"}
                       class="hidden group-active/terminal-toggle:inline-block"
                     />
                   </div>
@@ -323,9 +326,9 @@ export function SessionPaneHeader(props: SessionPaneHeaderProps) {
           </Show>
           <Tooltip value="Toggle terminal">
             <IconButton
-              icon={layout.terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
+              icon={view().terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
               variant="ghost"
-              onClick={layout.terminal.toggle}
+              onClick={view().terminal.toggle}
             />
           </Tooltip>
           <Tooltip value="New tab">

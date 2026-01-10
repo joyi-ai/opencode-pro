@@ -96,9 +96,10 @@ function summarizeChanges(changes: Record<string, unknown>[]) {
     const file = readString(change.path)
     if (!file) continue
     const kindValue = change.kind
-    const kind = typeof kindValue === "string"
-      ? kindValue
-      : readString(isRecord(kindValue) ? kindValue.type : undefined) ?? "update"
+    const kind =
+      typeof kindValue === "string"
+        ? kindValue
+        : (readString(isRecord(kindValue) ? kindValue.type : undefined) ?? "update")
     const diff = formatChangeDiff(change, kind)
     const counts = countDiff(diff)
     summaries.push({
@@ -113,7 +114,10 @@ function summarizeChanges(changes: Record<string, unknown>[]) {
 }
 
 function aggregateDiff(changes: ChangeSummary[]) {
-  return changes.map((change) => change.diff).join("\n\n").trim()
+  return changes
+    .map((change) => change.diff)
+    .join("\n\n")
+    .trim()
 }
 
 function summarizeInput(changes: ChangeSummary[]) {
@@ -261,7 +265,10 @@ export namespace CodexProcessor {
   }
 
   async function handleApproval(ctx: ProcessContext, message: CodexRequest) {
-    if (message.method !== "item/commandExecution/requestApproval" && message.method !== "item/fileChange/requestApproval")
+    if (
+      message.method !== "item/commandExecution/requestApproval" &&
+      message.method !== "item/fileChange/requestApproval"
+    )
       return false
     const params = message.params
     if (!isRecord(params)) return false
@@ -462,8 +469,14 @@ export namespace CodexProcessor {
   async function startReasoningPart(ctx: ProcessContext, item: Record<string, unknown>) {
     const itemId = readString(item.id)
     if (!itemId) return
-    const summary = readArray(item.summary).map((entry) => readString(entry)).filter(Boolean).join("\n")
-    const content = readArray(item.content).map((entry) => readString(entry)).filter(Boolean).join("\n")
+    const summary = readArray(item.summary)
+      .map((entry) => readString(entry))
+      .filter(Boolean)
+      .join("\n")
+    const content = readArray(item.content)
+      .map((entry) => readString(entry))
+      .filter(Boolean)
+      .join("\n")
     const text = summary || content
     const part: MessageV2.ReasoningPart = {
       id: Identifier.ascending("part"),
@@ -499,8 +512,14 @@ export namespace CodexProcessor {
     if (!itemId) return
     const part = ctx.reasoningParts.get(itemId)
     if (!part) return
-    const summary = readArray(item.summary).map((entry) => readString(entry)).filter(Boolean).join("\n")
-    const content = readArray(item.content).map((entry) => readString(entry)).filter(Boolean).join("\n")
+    const summary = readArray(item.summary)
+      .map((entry) => readString(entry))
+      .filter(Boolean)
+      .join("\n")
+    const content = readArray(item.content)
+      .map((entry) => readString(entry))
+      .filter(Boolean)
+      .join("\n")
     const text = summary || content
     if (text) part.text = text
     part.time = {
@@ -603,7 +622,12 @@ export namespace CodexProcessor {
     }
   }
 
-  async function handleNotification(ctx: ProcessContext, params: Record<string, unknown>, method: string, done: () => void) {
+  async function handleNotification(
+    ctx: ProcessContext,
+    params: Record<string, unknown>,
+    method: string,
+    done: () => void,
+  ) {
     if (method === "turn/started") {
       const turn = isRecord(params.turn) ? params.turn : undefined
       const turnId = turn ? readString(turn.id) : undefined
@@ -680,7 +704,7 @@ export namespace CodexProcessor {
 
     const run = async (instructionsOverride?: string) => {
       SessionStatus.set(input.sessionID, { type: "busy" })
-      const instructions = instructionsOverride ?? await buildInstructions(input)
+      const instructions = instructionsOverride ?? (await buildInstructions(input))
       const threadID = await ensureThread(input, instructions)
       const ctx: ProcessContext = {
         sessionID: input.sessionID,

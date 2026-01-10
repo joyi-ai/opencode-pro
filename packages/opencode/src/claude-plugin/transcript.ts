@@ -123,10 +123,7 @@ export namespace ClaudePluginTranscript {
   /**
    * Record a user message
    */
-  export async function recordUserMessage(input: {
-    sessionID: string
-    content: string
-  }): Promise<void> {
+  export async function recordUserMessage(input: { sessionID: string; content: string }): Promise<void> {
     await append(input.sessionID, {
       type: "user",
       timestamp: new Date().toISOString(),
@@ -137,10 +134,7 @@ export namespace ClaudePluginTranscript {
   /**
    * Record an assistant message
    */
-  export async function recordAssistantMessage(input: {
-    sessionID: string
-    content: string
-  }): Promise<void> {
+  export async function recordAssistantMessage(input: { sessionID: string; content: string }): Promise<void> {
     await append(input.sessionID, {
       type: "assistant",
       timestamp: new Date().toISOString(),

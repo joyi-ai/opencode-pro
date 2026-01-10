@@ -24,6 +24,10 @@ export function PaneHeader(props: PaneHeaderProps) {
   const sync = useSync()
   const local = useLocal()
   const multiPane = useMultiPane()
+  const sessionKey = createMemo(
+    () => `multi-${props.paneId}-${props.directory}${props.sessionId ? "/" + props.sessionId : ""}`,
+  )
+  const view = createMemo(() => layout.view(sessionKey()))
 
   const sessions = createMemo(() => (sync.data.session ?? []).filter((s) => !s.parentID))
   const currentSession = createMemo(() => sessions().find((s) => s.id === props.sessionId))
@@ -94,7 +98,11 @@ export function PaneHeader(props: PaneHeaderProps) {
             </Tooltip>
           </Show>
           <Tooltip value="Toggle terminal">
-            <IconButton icon={layout.terminal.opened() ? "layout-bottom-full" : "layout-bottom"} variant="ghost" onClick={layout.terminal.toggle} />
+            <IconButton
+              icon={view().terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
+              variant="ghost"
+              onClick={view().terminal.toggle}
+            />
           </Tooltip>
           <Tooltip value="New tab">
             <IconButton icon="plus" variant="ghost" onClick={handleAddPane} />

@@ -147,8 +147,7 @@ function normalizeEntry(entry: PromptEntry | undefined): PromptEntry {
     }
   }
   const items = Array.isArray(context.items) ? context.items : fallback.context.items
-  const activeTab =
-    typeof context.activeTab === "boolean" ? context.activeTab : fallback.context.activeTab
+  const activeTab = typeof context.activeTab === "boolean" ? context.activeTab : fallback.context.activeTab
   return {
     prompt,
     cursor: entry.cursor,

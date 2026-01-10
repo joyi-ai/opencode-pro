@@ -47,7 +47,13 @@ function parseHex(hex: string): RGB | null {
   if (!value.startsWith("#")) return null
   const raw = value.slice(1)
   if (raw.length !== 3 && raw.length !== 6) return null
-  const expanded = raw.length === 3 ? raw.split("").map((c) => c + c).join("") : raw
+  const expanded =
+    raw.length === 3
+      ? raw
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : raw
   const int = Number.parseInt(expanded, 16)
   if (Number.isNaN(int)) return null
   return {
@@ -95,9 +101,10 @@ function readPalette(mode: "light" | "dark", relative = false): RGB[] {
 
   // Strong: use theme's accent/brand colors at high saturation
   const brandColor = parseColor(root.getPropertyValue("--surface-brand-base")) ?? fallback
-  const accentColor = parseColor(root.getPropertyValue("--text-accent-base"))
-    ?? parseColor(root.getPropertyValue("--text-interactive-base"))
-    ?? brandColor
+  const accentColor =
+    parseColor(root.getPropertyValue("--text-accent-base")) ??
+    parseColor(root.getPropertyValue("--text-interactive-base")) ??
+    brandColor
   const strength = mode === "dark" ? 0.78 : 0.88
 
   return [
@@ -182,10 +189,7 @@ export function ShiftingGradient(props: { class?: string }) {
   )
 
   return (
-    <div
-      aria-hidden="true"
-      class={`pointer-events-none absolute inset-0 overflow-hidden ${props.class ?? ""}`}
-    >
+    <div aria-hidden="true" class={`pointer-events-none absolute inset-0 overflow-hidden ${props.class ?? ""}`}>
       <Index each={store.blobs}>
         {(item) => (
           <div

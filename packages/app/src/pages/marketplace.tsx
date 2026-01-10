@@ -115,9 +115,7 @@ export default function Marketplace() {
     const query = searchQuery().toLowerCase()
     if (!query) return installed() ?? []
     return (installed() ?? []).filter(
-      (p) =>
-        p.manifest.name.toLowerCase().includes(query) ||
-        p.manifest.description?.toLowerCase().includes(query),
+      (p) => p.manifest.name.toLowerCase().includes(query) || p.manifest.description?.toLowerCase().includes(query),
     )
   })
 
@@ -379,9 +377,7 @@ export default function Marketplace() {
 
                       {/* Description */}
                       <Show when={plugin.manifest.description}>
-                        <p class="mt-3 text-13-regular text-text-base line-clamp-2">
-                          {plugin.manifest.description}
-                        </p>
+                        <p class="mt-3 text-13-regular text-text-base line-clamp-2">{plugin.manifest.description}</p>
                       </Show>
 
                       {/* Footer with version and uninstall */}

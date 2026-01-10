@@ -94,9 +94,7 @@ export function AudioWaveform(props: AudioWaveformProps) {
     const processing = props.processing ?? false
 
     if (!active) {
-      animationState.targetLevel = processing
-        ? Math.max(animationState.targetLevel, PROCESSING_BASE_LEVEL)
-        : 0
+      animationState.targetLevel = processing ? Math.max(animationState.targetLevel, PROCESSING_BASE_LEVEL) : 0
       if (!processing) {
         animationState.currentLevel *= 0.4
         if (animationState.currentLevel < 0.0002) {
@@ -151,8 +149,7 @@ export function AudioWaveform(props: AudioWaveformProps) {
     }
 
     const step = () => {
-      animationState.currentLevel +=
-        (animationState.targetLevel - animationState.currentLevel) * LEVEL_SMOOTHING
+      animationState.currentLevel += (animationState.targetLevel - animationState.currentLevel) * LEVEL_SMOOTHING
       if (animationState.currentLevel < 0.0002) {
         animationState.currentLevel = 0
       }
@@ -175,10 +172,7 @@ export function AudioWaveform(props: AudioWaveformProps) {
       waveRefs.forEach((path, index) => {
         if (!path) return
         const config = WAVE_CONFIG[index] ?? WAVE_CONFIG[WAVE_CONFIG.length - 1]
-        const amplitudeFactor = Math.min(
-          MAX_AMPLITUDE,
-          Math.max(MIN_AMPLITUDE, level * config.multiplier),
-        )
+        const amplitudeFactor = Math.min(MAX_AMPLITUDE, Math.max(MIN_AMPLITUDE, level * config.multiplier))
         const amplitude = Math.max(1, waveHeight * 0.75 * amplitudeFactor)
         const phase = animationState.phase + config.phaseOffset
         const pathD = createWavePath(waveWidth, baseline, amplitude, config.frequency, phase)

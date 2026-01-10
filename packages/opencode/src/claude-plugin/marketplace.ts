@@ -154,12 +154,8 @@ export namespace ClaudePluginMarketplace {
   /**
    * Download and install a plugin from the marketplace
    */
-  export async function download(
-    entry: ClaudePluginSchema.MarketplaceEntry,
-    targetDir?: string,
-  ): Promise<string> {
-    const pluginDir =
-      targetDir ?? path.join(Global.Path.data, "claude-plugins", entry.name)
+  export async function download(entry: ClaudePluginSchema.MarketplaceEntry, targetDir?: string): Promise<string> {
+    const pluginDir = targetDir ?? path.join(Global.Path.data, "claude-plugins", entry.name)
 
     // Ensure the directory exists
     await mkdir(pluginDir, { recursive: true })
@@ -198,9 +194,7 @@ export namespace ClaudePluginMarketplace {
     let gitUrl = resolvedUrl
     if (resolvedUrl.includes("github.com") && !resolvedUrl.endsWith(".git")) {
       // Convert tree/main URLs back to clone URLs
-      gitUrl = resolvedUrl
-        .replace(/\/tree\/[^/]+\/.*$/, "")
-        .replace(/\/?$/, ".git")
+      gitUrl = resolvedUrl.replace(/\/tree\/[^/]+\/.*$/, "").replace(/\/?$/, ".git")
     }
 
     const proc = Bun.spawn(["git", "clone", "--depth", "1", gitUrl, targetDir], {

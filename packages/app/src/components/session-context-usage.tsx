@@ -25,9 +25,8 @@ export function SessionContextUsage(props: SessionContextUsageProps) {
     () => props.sessionKey ?? `${params.dir}${effectiveSessionId() ? "/" + effectiveSessionId() : ""}`,
   )
   const tabs = createMemo(() => layout.tabs(sessionKey()))
-  const messages = createMemo(() =>
-    effectiveSessionId() ? (sync.data.message[effectiveSessionId()!] ?? []) : [],
-  )
+  const view = createMemo(() => layout.view(sessionKey()))
+  const messages = createMemo(() => (effectiveSessionId() ? (sync.data.message[effectiveSessionId()!] ?? []) : []))
 
   const cost = createMemo(() => {
     const total = messages().reduce((sum, x) => sum + (x.role === "assistant" ? x.cost : 0), 0)
@@ -55,7 +54,7 @@ export function SessionContextUsage(props: SessionContextUsageProps) {
 
   const openContext = () => {
     if (!effectiveSessionId()) return
-    layout.review.open()
+    view().reviewPanel.open()
     tabs().open("context")
     tabs().setActive("context")
   }

@@ -250,7 +250,12 @@ export function PaneGrid(props: PaneGridProps) {
         const anim = body.animate(
           [
             { left: `${oldLeft}px`, top: `${oldTop}px`, width: `${prevRect.width}px`, height: `${prevRect.height}px` },
-            { left: `${newLeft}px`, top: `${newTop}px`, width: `${currentRect.width}px`, height: `${currentRect.height}px` },
+            {
+              left: `${newLeft}px`,
+              top: `${newTop}px`,
+              width: `${currentRect.width}px`,
+              height: `${currentRect.height}px`,
+            },
           ],
           { duration: FLIP_DURATION, easing: "ease-out" },
         )
@@ -376,7 +381,10 @@ export function PaneGrid(props: PaneGridProps) {
       const containerSize = type === "col" ? rect.width : rect.height
       const cursorPos = type === "col" ? moveEvent.clientX - rect.left : moveEvent.clientY - rect.top
       const handlePos = cursorPos - cursorOffset
-      const minPx = type === "col" ? minTrackPx(count, containerSize, MIN_PANE_WIDTH) : minTrackPx(count, containerSize, MIN_PANE_HEIGHT)
+      const minPx =
+        type === "col"
+          ? minTrackPx(count, containerSize, MIN_PANE_WIDTH)
+          : minTrackPx(count, containerSize, MIN_PANE_HEIGHT)
       const newSizes = resizeAdjacent(count, startSizes, index, handlePos, containerSize, minPx)
 
       if (type === "col") {
@@ -460,7 +468,14 @@ export function PaneGrid(props: PaneGridProps) {
       const nextLayout = layout()
       const nextCols = colSizes()
       const nextRows = rowSizes()
-      if (nextCols && nextCols.length === cols && nextRows && nextRows.length === rows && nextLayout.columns === cols && nextLayout.rows === rows) {
+      if (
+        nextCols &&
+        nextCols.length === cols &&
+        nextRows &&
+        nextRows.length === rows &&
+        nextLayout.columns === cols &&
+        nextLayout.rows === rows
+      ) {
         multiPane.grid.set(page, nextLayout, { colSizes: nextCols, rowSizes: nextRows })
       }
       resizeCleanup = null

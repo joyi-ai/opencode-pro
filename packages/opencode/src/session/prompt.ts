@@ -313,11 +313,7 @@ export namespace SessionPrompt {
     return await runLoop(sessionID, session, abort)
   })
 
-  async function runLoop(
-    sessionID: string,
-    session: Session.Info,
-    abort: AbortSignal,
-  ): Promise<MessageV2.WithParts> {
+  async function runLoop(sessionID: string, session: Session.Info, abort: AbortSignal): Promise<MessageV2.WithParts> {
     let step = 0
     while (true) {
       SessionStatus.set(sessionID, { type: "busy" })
@@ -1020,7 +1016,10 @@ export namespace SessionPrompt {
             await ClaudePlugin.Transcript.recordToolResult({
               sessionID: ctx.sessionID,
               toolName: item.id,
-              toolOutput: typeof result.output === "string" ? { output: result.output } : (result.output as Record<string, unknown>),
+              toolOutput:
+                typeof result.output === "string"
+                  ? { output: result.output }
+                  : (result.output as Record<string, unknown>),
               toolUseId: options.toolCallId,
             })
 
