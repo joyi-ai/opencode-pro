@@ -35,9 +35,7 @@ opencode serve --cors http://localhost:5173 --cors https://app.example.com
 
 ### How it works
 
-When you run `opencode` it starts a TUI and a server. Where the TUI is the
-client that talks to the server. The server exposes an OpenAPI 3.1 spec
-endpoint. This endpoint is also used to generate an [SDK](/docs/sdk).
+OpenCode exposes an OpenAPI 3.1 spec endpoint that is used to generate an [SDK](/docs/sdk) and power clients like the desktop app.
 
 :::tip
 Use the opencode server to interact with opencode programmatically.
@@ -45,16 +43,7 @@ Use the opencode server to interact with opencode programmatically.
 
 This architecture lets opencode support multiple clients and allows you to interact with opencode programmatically.
 
-You can run `opencode serve` to start a standalone server. If you have the
-opencode TUI running, `opencode serve` will start a new server.
-
----
-
-#### Connect to an existing server
-
-When you start the TUI it randomly assigns a port and hostname. You can instead pass in the `--hostname` and `--port` [flags](/docs/cli). Then use this to connect to its server.
-
-The [`/tui`](#tui) endpoint can be used to drive the TUI through the server. For example, you can prefill or run a prompt. This setup is used by the OpenCode [IDE](/docs/ide) plugins.
+You can run `opencode serve` to start a standalone server.
 
 ---
 
@@ -232,24 +221,6 @@ The opencode server exposes the following APIs.
 | Method | Path   | Description                                                  | Response  |
 | ------ | ------ | ------------------------------------------------------------ | --------- |
 | `POST` | `/log` | Write log entry. Body: `{ service, level, message, extra? }` | `boolean` |
-
----
-
-### TUI
-
-| Method | Path                    | Description                                 | Response               |
-| ------ | ----------------------- | ------------------------------------------- | ---------------------- |
-| `POST` | `/tui/append-prompt`    | Append text to the prompt                   | `boolean`              |
-| `POST` | `/tui/open-help`        | Open the help dialog                        | `boolean`              |
-| `POST` | `/tui/open-sessions`    | Open the session selector                   | `boolean`              |
-| `POST` | `/tui/open-themes`      | Open the theme selector                     | `boolean`              |
-| `POST` | `/tui/open-models`      | Open the model selector                     | `boolean`              |
-| `POST` | `/tui/submit-prompt`    | Submit the current prompt                   | `boolean`              |
-| `POST` | `/tui/clear-prompt`     | Clear the prompt                            | `boolean`              |
-| `POST` | `/tui/execute-command`  | Execute a command (`{ command }`)           | `boolean`              |
-| `POST` | `/tui/show-toast`       | Show toast (`{ title?, message, variant }`) | `boolean`              |
-| `GET`  | `/tui/control/next`     | Wait for the next control request           | Control request object |
-| `POST` | `/tui/control/response` | Respond to a control request (`{ body }`)   | `boolean`              |
 
 ---
 

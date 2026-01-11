@@ -7,9 +7,7 @@ import { Tabs, TabItem } from "@astrojs/starlight/components"
 import config from "../../../config.mjs"
 export const console = config.console
 
-[**OpenCode**](/) is an open source AI coding agent. It's available as a terminal-based interface, desktop app, or IDE extension.
-
-![OpenCode TUI with the opencode theme](../../assets/lander/screenshot.png)
+[**OpenCode**](/) is an open source AI coding agent. It's available as a command-line interface, desktop app, or IDE extension.
 
 Let's get started.
 
@@ -134,22 +132,11 @@ If you are new to using LLM providers, we recommend using [OpenCode Zen](/docs/z
 It's a curated list of models that have been tested and verified by the OpenCode
 team.
 
-1. Run the `/connect` command in the TUI, select opencode, and head to [opencode.ai/auth](https://opencode.ai/auth).
-
-   ```txt
-   /connect
-   ```
+1. Run `opencode auth login` or use the desktop app to authenticate at [opencode.ai/auth](https://opencode.ai/auth).
 
 2. Sign in, add your billing details, and copy your API key.
 
-3. Paste your API key.
-
-   ```txt
-   ┌ API key
-   │
-   │
-   └ enter
-   ```
+3. Paste your API key when prompted.
 
 Alternatively, you can select one of the other providers. [Learn more](/docs/providers#directory).
 
@@ -164,11 +151,7 @@ you want to work on.
 cd /path/to/project
 ```
 
-And run OpenCode.
-
-```bash
-opencode
-```
+Open the desktop app or run `opencode run "<message>"`.
 
 Next, initialize OpenCode for the project by running the following command.
 

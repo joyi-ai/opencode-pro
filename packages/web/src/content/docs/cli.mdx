@@ -5,39 +5,11 @@ description: OpenCode CLI options and commands.
 
 import { Tabs, TabItem } from "@astrojs/starlight/components"
 
-The OpenCode CLI by default starts the [TUI](/docs/tui) when run without any arguments.
-
-```bash
-opencode
-```
-
-But it also accepts commands as documented on this page. This allows you to interact with OpenCode programmatically.
+The OpenCode CLI provides commands for running sessions and managing servers. This allows you to interact with OpenCode programmatically.
 
 ```bash
 opencode run "Explain how closures work in JavaScript"
 ```
-
----
-
-### tui
-
-Start the OpenCode terminal user interface.
-
-```bash
-opencode [project]
-```
-
-#### Flags
-
-| Flag         | Short | Description                                |
-| ------------ | ----- | ------------------------------------------ |
-| `--continue` | `-c`  | Continue the last session                  |
-| `--session`  | `-s`  | Session ID to continue                     |
-| `--prompt`   |       | Prompt to use                              |
-| `--model`    | `-m`  | Model to use in the form of provider/model |
-| `--agent`    |       | Agent to use                               |
-| `--port`     |       | Port to listen on                          |
-| `--hostname` |       | Hostname to listen on                      |
 
 ---
 
@@ -54,33 +26,6 @@ Manage agents for OpenCode.
 ```bash
 opencode agent [command]
 ```
-
----
-
-### attach
-
-Attach a terminal to an already running OpenCode backend server started via `serve` or `web` commands.
-
-```bash
-opencode attach [url]
-```
-
-This allows using the TUI with a remote OpenCode backend. For example:
-
-```bash
-# Start the backend server for web/mobile access
-opencode web --port 4096 --hostname 0.0.0.0
-
-# In another terminal, attach the TUI to the running backend
-opencode attach http://10.20.30.40:4096
-```
-
-#### Flags
-
-| Flag        | Short | Description                       |
-| ----------- | ----- | --------------------------------- |
-| `--dir`     |       | Working directory to start TUI in |
-| `--session` | `-s`  | Session ID to continue            |
 
 ---
 
@@ -316,7 +261,7 @@ Run opencode in non-interactive mode by passing a prompt directly.
 opencode run [message..]
 ```
 
-This is useful for scripting, automation, or when you want a quick answer without launching the full TUI. For example.
+This is useful for scripting, automation, or when you want a quick answer without launching the desktop app. For example.
 
 ```bash "opencode run"
 opencode run Explain the use of context in Go
@@ -358,7 +303,7 @@ Start a headless OpenCode server for API access. Check out the [server docs](/do
 opencode serve
 ```
 
-This starts an HTTP server that provides API access to opencode functionality without the TUI interface.
+This starts an HTTP server that provides API access to opencode functionality without the desktop UI.
 
 #### Flags
 
@@ -560,7 +505,6 @@ OpenCode can be configured using environment variables.
 | `OPENCODE_CONFIG_CONTENT`             | string  | Inline json config content                       |
 | `OPENCODE_DISABLE_AUTOUPDATE`         | boolean | Disable automatic update checks                  |
 | `OPENCODE_DISABLE_PRUNE`              | boolean | Disable pruning of old data                      |
-| `OPENCODE_DISABLE_TERMINAL_TITLE`     | boolean | Disable automatic terminal title updates         |
 | `OPENCODE_PERMISSION`                 | string  | Inlined json permissions config                  |
 | `OPENCODE_DISABLE_DEFAULT_PLUGINS`    | boolean | Disable default plugins                          |
 | `OPENCODE_DISABLE_LSP_DOWNLOAD`       | boolean | Disable automatic LSP server downloads           |
@@ -582,7 +526,6 @@ These environment variables enable experimental features that may change or be r
 | ----------------------------------------------- | ------- | --------------------------------------- |
 | `OPENCODE_EXPERIMENTAL`                         | boolean | Enable all experimental features        |
 | `OPENCODE_EXPERIMENTAL_ICON_DISCOVERY`          | boolean | Enable icon discovery                   |
-| `OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | boolean | Disable copy on select in TUI           |
 | `OPENCODE_EXPERIMENTAL_BASH_MAX_OUTPUT_LENGTH`  | number  | Max output length for bash commands     |
 | `OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS` | number  | Default timeout for bash commands in ms |
 | `OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX`        | number  | Max output tokens for LLM responses     |

@@ -88,24 +88,13 @@ export const PrCommand = cmd({
 
         UI.println(`Successfully checked out PR #${prNumber} as branch '${localBranchName}'`)
         UI.println()
-        UI.println("Starting opencode...")
-        UI.println()
-
-        // Launch opencode TUI with session ID if available
-        const { spawn } = await import("child_process")
-        const opencodeArgs = sessionId ? ["-s", sessionId] : []
-        const opencodeProcess = spawn("opencode", opencodeArgs, {
-          stdio: "inherit",
-          cwd: process.cwd(),
-        })
-
-        await new Promise<void>((resolve, reject) => {
-          opencodeProcess.on("exit", (code) => {
-            if (code === 0) resolve()
-            else reject(new Error(`opencode exited with code ${code}`))
-          })
-          opencodeProcess.on("error", reject)
-        })
+        if (sessionId) {
+          UI.println(`Run: opencode run --session ${sessionId} "<message>"`)
+          UI.println("Or open the desktop app to continue the session.")
+          return
+        }
+        UI.println('Run: opencode run "<message>"')
+        UI.println("Or open the desktop app to start a new session.")
       },
     })
   },

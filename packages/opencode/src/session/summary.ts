@@ -75,9 +75,7 @@ export namespace SessionSummary {
     const msgWithParts = messages.find((m) => m.info.id === input.messageID)!
     const userMsg = msgWithParts.info as MessageV2.User
     const diffs = await computeDiff({ messages })
-    const textPart = msgWithParts.parts.find((p) => p.type === "text" && !p.synthetic) as
-      | MessageV2.TextPart
-      | undefined
+    const textPart = msgWithParts.parts.find((p) => p.type === "text" && !p.synthetic) as MessageV2.TextPart | undefined
     const text = textPart ? textPart.text : ""
     const providerID = userMsg.model.providerID
     if (providerID === "claude-agent" || providerID === "codex") {

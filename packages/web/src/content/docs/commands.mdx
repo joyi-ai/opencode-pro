@@ -3,13 +3,13 @@ title: Commands
 description: Create custom commands for repetitive tasks.
 ---
 
-Custom commands let you specify a prompt you want to run when that command is executed in the TUI.
+Custom commands let you specify a prompt you want to run when that command is executed in the OpenCode interface.
 
 ```bash frame="none"
 /my-command
 ```
 
-Custom commands are in addition to the built-in commands like `/init`, `/undo`, `/redo`, `/share`, `/help`. [Learn more](/docs/tui#commands).
+Custom commands are in addition to the built-in commands like `/init`, `/undo`, `/redo`, `/share`, `/help`.
 
 ---
 
@@ -58,7 +58,7 @@ Use the `command` option in your OpenCode [config](/docs/config):
     "test": {
       // This is the prompt that will be sent to the LLM
       "template": "Run the full test suite with coverage report and show any failures.\nFocus on the failing tests and suggest fixes.",
-      // This is show as the description in the TUI
+      // This is shown as the description in the command palette
       "description": "Run tests with coverage",
       "agent": "build",
       "model": "anthropic/claude-3-5-sonnet-20241022"
@@ -67,7 +67,7 @@ Use the `command` option in your OpenCode [config](/docs/config):
 }
 ```
 
-Now you can run this command in the TUI:
+Now you can run this command from the prompt:
 
 ```bash frame="none"
 /test
@@ -163,7 +163,7 @@ This replaces:
 
 ### Shell output
 
-Use _!`command`_ to inject [bash command](/docs/tui#bash-commands) output into your prompt.
+Use _!`command`_ to inject bash command output into your prompt.
 
 For example, to create a custom command that analyzes test coverage:
 
@@ -250,7 +250,7 @@ Use the `description` option to provide a brief description of what the command 
 }
 ```
 
-This is shown as the description in the TUI when you type in the command.
+This is shown as the description in the command palette when you type the command.
 
 ---
 
@@ -314,7 +314,7 @@ This is an **optional** config option.
 
 ## Built-in
 
-opencode includes several built-in commands like `/init`, `/undo`, `/redo`, `/share`, `/help`; [learn more](/docs/tui#commands).
+opencode includes several built-in commands like `/init`, `/undo`, `/redo`, `/share`, `/help`.
 
 :::note
 Custom commands can override built-in commands.

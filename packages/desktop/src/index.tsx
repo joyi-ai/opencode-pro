@@ -28,7 +28,6 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   )
 }
 
-
 let update: Update | null = null
 
 const platform: Platform = {

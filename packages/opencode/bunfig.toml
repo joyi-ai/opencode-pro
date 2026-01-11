@@ -1,8 +1,7 @@
-# Preload solid JSX plugin for TUI
-preload = ["@opentui/solid/preload"]
+preload = []
 
 [test]
-preload = ["@opentui/solid/preload", "./test/preload.ts"]
+preload = ["./test/preload.ts"]
 timeout = 10000  # 10 seconds (default is 5000ms)
 # Enable code coverage
 coverage = true

@@ -1,4 +1,14 @@
-import { Component, Show, Match, Switch as SolidSwitch, createMemo, createSignal, createEffect, on, For } from "solid-js"
+import {
+  Component,
+  Show,
+  Match,
+  Switch as SolidSwitch,
+  createMemo,
+  createSignal,
+  createEffect,
+  on,
+  For,
+} from "solid-js"
 import { useParams } from "@solidjs/router"
 import { Dialog } from "@opencode-ai/ui/dialog"
 import { IconButton } from "@opencode-ai/ui/icon-button"
@@ -123,9 +133,7 @@ export const SettingsDialog: Component = () => {
                   )}
                 </For>
               </div>
-              <Show when={activeMode()}>
-                {(mode) => <ModeSettingsPanel mode={mode()} />}
-              </Show>
+              <Show when={activeMode()}>{(mode) => <ModeSettingsPanel mode={mode()} />}</Show>
             </div>
           </Show>
 
@@ -134,7 +142,10 @@ export const SettingsDialog: Component = () => {
               <Show when={isGitProject()}>
                 <div class="flex flex-col gap-2">
                   <div class="text-12-medium text-text-strong">New Sessions</div>
-                  <Switch checked={layout.worktree.enabled()} onChange={(checked) => layout.worktree.setEnabled(checked)}>
+                  <Switch
+                    checked={layout.worktree.enabled()}
+                    onChange={(checked) => layout.worktree.setEnabled(checked)}
+                  >
                     Enable worktree isolation
                   </Switch>
                   <Show when={layout.worktree.enabled()}>
@@ -263,7 +274,10 @@ export const SettingsDialog: Component = () => {
                         onKeyDown={handleKeybindKeyDown}
                         onBlur={() => setIsCapturingKeybind(false)}
                       >
-                        <Show when={!isCapturingKeybind()} fallback={<span class="text-text-subtle">Press keys...</span>}>
+                        <Show
+                          when={!isCapturingKeybind()}
+                          fallback={<span class="text-text-subtle">Press keys...</span>}
+                        >
                           {formatKeybind(voice.settings.keybind())}
                         </Show>
                       </button>

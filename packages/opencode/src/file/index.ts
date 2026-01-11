@@ -124,113 +124,112 @@ export namespace File {
 
   const state = Instance.state(
     async () => {
-    type Entry = { files: string[]; dirs: string[] }
-    let cache: Entry = { files: [], dirs: [] }
-    let fetching = false
-    const dirty = { value: true }
-    const last = { value: 0 }
-    const useWatcher =
-      Flag.OPENCODE_EXPERIMENTAL_FILEWATCHER && !Flag.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER
-    const interval = useWatcher ? 30000 : 5000
+      type Entry = { files: string[]; dirs: string[] }
+      let cache: Entry = { files: [], dirs: [] }
+      let fetching = false
+      const dirty = { value: true }
+      const last = { value: 0 }
+      const useWatcher = Flag.OPENCODE_EXPERIMENTAL_FILEWATCHER && !Flag.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER
+      const interval = useWatcher ? 30000 : 5000
 
-    const isGlobalHome = Instance.directory === Global.Path.home && Instance.project.id === "global"
-    const subs: Array<() => void> = []
+      const isGlobalHome = Instance.directory === Global.Path.home && Instance.project.id === "global"
+      const subs: Array<() => void> = []
 
-    const markDirty = () => {
-      dirty.value = true
-    }
+      const markDirty = () => {
+        dirty.value = true
+      }
 
-    subs.push(
-      Bus.subscribe(FileWatcher.Event.Updated, () => {
-        markDirty()
-      }),
-    )
-    subs.push(
-      Bus.subscribe(Event.Edited, () => {
-        markDirty()
-      }),
-    )
+      subs.push(
+        Bus.subscribe(FileWatcher.Event.Updated, () => {
+          markDirty()
+        }),
+      )
+      subs.push(
+        Bus.subscribe(Event.Edited, () => {
+          markDirty()
+        }),
+      )
 
-    const fn = async (result: Entry) => {
-      // Disable scanning if in root of file system
-      if (Instance.directory === path.parse(Instance.directory).root) return
-      fetching = true
+      const fn = async (result: Entry) => {
+        // Disable scanning if in root of file system
+        if (Instance.directory === path.parse(Instance.directory).root) return
+        fetching = true
 
-      if (isGlobalHome) {
-        const dirs = new Set<string>()
-        const ignore = new Set<string>()
+        if (isGlobalHome) {
+          const dirs = new Set<string>()
+          const ignore = new Set<string>()
 
-        if (process.platform === "darwin") ignore.add("Library")
-        if (process.platform === "win32") ignore.add("AppData")
+          if (process.platform === "darwin") ignore.add("Library")
+          if (process.platform === "win32") ignore.add("AppData")
 
-        const ignoreNested = new Set(["node_modules", "dist", "build", "target", "vendor"])
-        const shouldIgnore = (name: string) => name.startsWith(".") || ignore.has(name)
-        const shouldIgnoreNested = (name: string) => name.startsWith(".") || ignoreNested.has(name)
+          const ignoreNested = new Set(["node_modules", "dist", "build", "target", "vendor"])
+          const shouldIgnore = (name: string) => name.startsWith(".") || ignore.has(name)
+          const shouldIgnoreNested = (name: string) => name.startsWith(".") || ignoreNested.has(name)
 
-        const top = await fs.promises
-          .readdir(Instance.directory, { withFileTypes: true })
-          .catch(() => [] as fs.Dirent[])
+          const top = await fs.promises
+            .readdir(Instance.directory, { withFileTypes: true })
+            .catch(() => [] as fs.Dirent[])
 
-        for (const entry of top) {
-          if (!entry.isDirectory()) continue
-          if (shouldIgnore(entry.name)) continue
-          dirs.add(entry.name + "/")
+          for (const entry of top) {
+            if (!entry.isDirectory()) continue
+            if (shouldIgnore(entry.name)) continue
+            dirs.add(entry.name + "/")
 
-          const base = path.join(Instance.directory, entry.name)
-          const children = await fs.promises.readdir(base, { withFileTypes: true }).catch(() => [] as fs.Dirent[])
-          for (const child of children) {
-            if (!child.isDirectory()) continue
-            if (shouldIgnoreNested(child.name)) continue
-            dirs.add(entry.name + "/" + child.name + "/")
+            const base = path.join(Instance.directory, entry.name)
+            const children = await fs.promises.readdir(base, { withFileTypes: true }).catch(() => [] as fs.Dirent[])
+            for (const child of children) {
+              if (!child.isDirectory()) continue
+              if (shouldIgnoreNested(child.name)) continue
+              dirs.add(entry.name + "/" + child.name + "/")
+            }
           }
+
+          result.dirs = Array.from(dirs).toSorted()
+          cache = result
+          fetching = false
+          dirty.value = false
+          last.value = Date.now()
+          return
         }
 
-        result.dirs = Array.from(dirs).toSorted()
+        const set = new Set<string>()
+        for await (const file of Ripgrep.files({ cwd: Instance.directory })) {
+          result.files.push(file)
+          let current = file
+          while (true) {
+            const dir = path.dirname(current)
+            if (dir === ".") break
+            if (dir === current) break
+            current = dir
+            if (set.has(dir)) continue
+            set.add(dir)
+            result.dirs.push(dir + "/")
+          }
+        }
         cache = result
         fetching = false
         dirty.value = false
         last.value = Date.now()
-        return
       }
+      fn(cache)
 
-      const set = new Set<string>()
-      for await (const file of Ripgrep.files({ cwd: Instance.directory })) {
-        result.files.push(file)
-        let current = file
-        while (true) {
-          const dir = path.dirname(current)
-          if (dir === ".") break
-          if (dir === current) break
-          current = dir
-          if (set.has(dir)) continue
-          set.add(dir)
-          result.dirs.push(dir + "/")
-        }
-      }
-      cache = result
-      fetching = false
-      dirty.value = false
-      last.value = Date.now()
-    }
-    fn(cache)
-
-    return {
-      async files() {
-        if (!fetching) {
-          const now = Date.now()
-          const stale = dirty.value || now - last.value > interval
-          if (stale) {
-            fn({
-              files: [],
-              dirs: [],
-            })
+      return {
+        async files() {
+          if (!fetching) {
+            const now = Date.now()
+            const stale = dirty.value || now - last.value > interval
+            if (stale) {
+              fn({
+                files: [],
+                dirs: [],
+              })
+            }
           }
-        }
-        return cache
-      },
-      subs,
-    }
-  },
+          return cache
+        },
+        subs,
+      }
+    },
     async (entry) => {
       const state = await entry
       for (const unsub of state.subs) {

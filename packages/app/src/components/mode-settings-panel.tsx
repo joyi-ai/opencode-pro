@@ -258,9 +258,7 @@ export const ModeSettingsPanel: Component<{
               </Switch>
               <Switch
                 checked={ohMySettings()?.sisyphusAgent?.plannerEnabled ?? true}
-                onChange={(checked) =>
-                  setStore("settings", "ohMyOpenCode", "sisyphusAgent", "plannerEnabled", checked)
-                }
+                onChange={(checked) => setStore("settings", "ohMyOpenCode", "sisyphusAgent", "plannerEnabled", checked)}
               >
                 Planner-Sisyphus
               </Switch>

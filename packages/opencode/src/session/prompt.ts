@@ -885,11 +885,7 @@ export namespace SessionPrompt {
         }
       }
 
-      await Plugin.trigger(
-        "experimental.chat.messages.transform",
-        { sessionID },
-        { messages: sessionMessages },
-      )
+      await Plugin.trigger("experimental.chat.messages.transform", { sessionID }, { messages: sessionMessages })
 
       const result = await processor.process({
         user: lastUser,
@@ -2086,10 +2082,10 @@ export namespace SessionPrompt {
     history: MessageV2.WithParts[]
     providerID: string
     modelID: string
-    }) {
-      if (input.providerID === "codex") return
-      if (input.session.parentID) return
-      if (!Session.isDefaultTitle(input.session.title)) return
+  }) {
+    if (input.providerID === "codex") return
+    if (input.session.parentID) return
+    if (!Session.isDefaultTitle(input.session.title)) return
 
     // Find first non-synthetic user message
     const firstRealUserIdx = input.history.findIndex(

@@ -5,7 +5,6 @@ import type { Props } from '@astrojs/starlight/props';
 
 import CopyIcon from "../assets/lander/copy.svg";
 import CheckIcon from "../assets/lander/check.svg";
-import TuiScreenshot from "../assets/lander/screenshot-splash.png";
 import VscodeScreenshot from "../assets/lander/screenshot-vscode.png";
 import GithubScreenshot from "../assets/lander/screenshot-github.png";
 
@@ -73,7 +72,6 @@ if (image) {
 
     <section class="content">
       <ul>
-        <li><b>Native TUI</b>: A responsive, native, themeable terminal UI.</li>
         <li><b>LSP enabled</b>: Automatically loads the right LSPs for the LLM.</li>
         <li><b>Multi-session</b>: Start multiple agents in parallel on the same project.</li>
         <li><b>Shareable links</b>: Share a link to any sessions for reference or to debug.</li>
@@ -147,14 +145,6 @@ if (image) {
     </section>
 
     <section class="images">
-      <div class="left">
-        <figure>
-          <figcaption>opencode TUI with the tokyonight theme</figcaption>
-          <a href="/docs/cli">
-            <Image src={TuiScreenshot} alt="opencode TUI with the tokyonight theme" />
-          </a>
-        </figure>
-      </div>
       <div class="right">
         <div class="row1">
           <figure>
@@ -350,22 +340,15 @@ section.content {
 section.images {
   --images-height: 600px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   grid-template-rows: var(--images-height);
   border-top: 2px solid var(--sl-color-border);
-
-  & > div.left {
-    display: flex;
-    grid-row: 1;
-    grid-column: 1;
-  }
 
   & > div.right {
     display: grid;
     grid-template-rows: 1fr 1fr;
     grid-row: 1;
-    grid-column: 2;
-    border-left: 2px solid var(--sl-color-border);
+    grid-column: 1;
 
     & > div.row1 {
       display: flex;
@@ -428,21 +411,9 @@ section.images {
     }
   }
 
-  & > div.left figure {
-    height: var(--images-height);
-    box-sizing: border-box;
-  }
-
   & > div.right figure {
     height: calc(var(--images-height) / 2);
     box-sizing: border-box;
-  }
-
-  & > div.left img {
-    width: 100%;
-    height: 100%;
-    min-width: 0;
-    object-fit: contain;
   }
 
   & > div.right img {
@@ -459,16 +430,9 @@ section.images {
       grid-template-rows: auto auto;
     }
 
-    & > div.left {
+    & > div.right {
       grid-row: 1;
       grid-column: 1;
-    }
-
-    & > div.right {
-      grid-row: 2;
-      grid-column: 1;
-      border-left: none;
-      border-top: 2px solid var(--sl-color-border);
 
       & > div.row1,
       & > div.row2 {
@@ -476,12 +440,10 @@ section.images {
       }
     }
 
-    & > div.left figure,
     & > div.right figure {
       height: auto;
     }
 
-    & > div.left img,
     & > div.right img {
       width: 100%;
       height: auto;

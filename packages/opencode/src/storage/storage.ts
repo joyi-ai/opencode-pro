@@ -219,12 +219,16 @@ export namespace Storage {
     if (migrated) return
 
     for await (const sessionFile of new Bun.Glob("session/*/*.json").scan({ cwd: dir, absolute: true })) {
-      const session = await Bun.file(sessionFile).json().catch(() => undefined)
+      const session = await Bun.file(sessionFile)
+        .json()
+        .catch(() => undefined)
       if (session) StorageSqlite.writeSession(session)
     }
 
     for await (const messageFile of new Bun.Glob("message/*/*.json").scan({ cwd: dir, absolute: true })) {
-      const message = await Bun.file(messageFile).json().catch(() => undefined)
+      const message = await Bun.file(messageFile)
+        .json()
+        .catch(() => undefined)
       if (!message) continue
       if (message.info?.id && message.info?.sessionID) {
         StorageSqlite.writeMessage(message)
@@ -235,7 +239,9 @@ export namespace Storage {
       const parts: unknown[] = []
       if (await fs.exists(partsDir)) {
         for await (const partFile of new Bun.Glob("*.json").scan({ cwd: partsDir, absolute: true })) {
-          const part = await Bun.file(partFile).json().catch(() => undefined)
+          const part = await Bun.file(partFile)
+            .json()
+            .catch(() => undefined)
           if (part) parts.push(part)
         }
       }
@@ -247,7 +253,9 @@ export namespace Storage {
     }
 
     for await (const diffFile of new Bun.Glob("session_diff/*.json").scan({ cwd: dir, absolute: true })) {
-      const diffs = await Bun.file(diffFile).json().catch(() => undefined)
+      const diffs = await Bun.file(diffFile)
+        .json()
+        .catch(() => undefined)
       if (diffs === undefined) continue
       const sessionID = path.basename(diffFile, ".json")
       StorageSqlite.writeDiff(sessionID, diffs)

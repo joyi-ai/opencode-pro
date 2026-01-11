@@ -146,7 +146,7 @@
 
   th,
   td {
-    /* Minimal borders for structure, matching TUI "lines" roughly but keeping it web-clean */
+    /* Minimal borders for structure, keeping it web-clean */
     border-bottom: 1px solid var(--border-weaker-base);
     padding: 0.75rem 0.5rem;
     text-align: left;

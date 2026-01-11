@@ -109,12 +109,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       setMeta("complete", sessionID, messages.length < limit)
     }
 
-    const loadMessages = async (input: {
-      sessionID: string
-      limit: number
-      afterID?: string
-      merge?: boolean
-    }) => {
+    const loadMessages = async (input: { sessionID: string; limit: number; afterID?: string; merge?: boolean }) => {
       const sessionID = input.sessionID
       if (meta.loading[sessionID]) return
 

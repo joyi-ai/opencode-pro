@@ -142,17 +142,19 @@ export namespace StorageSqlite {
     const afterID = input.afterID
     if (afterID && limit !== undefined) {
       const rows = db()
-        .query<{ id: string }, [string, string, number]>(
-          "SELECT id FROM messages WHERE sessionID = ? AND id < ? ORDER BY id DESC LIMIT ?",
-        )
+        .query<
+          { id: string },
+          [string, string, number]
+        >("SELECT id FROM messages WHERE sessionID = ? AND id < ? ORDER BY id DESC LIMIT ?")
         .all(input.sessionID, afterID, limit)
       return rows.map((row) => row.id)
     }
     if (afterID) {
       const rows = db()
-        .query<{ id: string }, [string, string]>(
-          "SELECT id FROM messages WHERE sessionID = ? AND id < ? ORDER BY id DESC",
-        )
+        .query<
+          { id: string },
+          [string, string]
+        >("SELECT id FROM messages WHERE sessionID = ? AND id < ? ORDER BY id DESC")
         .all(input.sessionID, afterID)
       return rows.map((row) => row.id)
     }
@@ -184,16 +186,15 @@ export namespace StorageSqlite {
   }
 
   export function readDiff(sessionID: string) {
-    const row = db().query<{ data: string }, [string]>("SELECT data FROM session_diff WHERE sessionID = ?").get(sessionID)
+    const row = db()
+      .query<{ data: string }, [string]>("SELECT data FROM session_diff WHERE sessionID = ?")
+      .get(sessionID)
     if (!row) return
     return JSON.parse(row.data)
   }
 
   export function writeDiff(sessionID: string, value: unknown) {
-    db().run("INSERT OR REPLACE INTO session_diff (sessionID, data) VALUES (?, ?)", [
-      sessionID,
-      JSON.stringify(value),
-    ])
+    db().run("INSERT OR REPLACE INTO session_diff (sessionID, data) VALUES (?, ?)", [sessionID, JSON.stringify(value)])
   }
 
   export function removeDiff(sessionID: string) {

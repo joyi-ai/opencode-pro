@@ -320,39 +320,6 @@ const content = await client.file.read({
 })
 ```
 
----
-
-### TUI
-
-| Method                         | Description               | Response  |
-| ------------------------------ | ------------------------- | --------- |
-| `tui.appendPrompt({ body })`   | Append text to the prompt | `boolean` |
-| `tui.openHelp()`               | Open the help dialog      | `boolean` |
-| `tui.openSessions()`           | Open the session selector | `boolean` |
-| `tui.openThemes()`             | Open the theme selector   | `boolean` |
-| `tui.openModels()`             | Open the model selector   | `boolean` |
-| `tui.submitPrompt()`           | Submit the current prompt | `boolean` |
-| `tui.clearPrompt()`            | Clear the prompt          | `boolean` |
-| `tui.executeCommand({ body })` | Execute a command         | `boolean` |
-| `tui.showToast({ body })`      | Show toast notification   | `boolean` |
-
----
-
-#### Examples
-
-```javascript
-// Control TUI interface
-await client.tui.appendPrompt({
-  body: { text: "Add this to prompt" },
-})
-
-await client.tui.showToast({
-  body: { message: "Task completed", variant: "success" },
-})
-```
-
----
-
 ### Auth
 
 | Method              | Description                    | Response  |

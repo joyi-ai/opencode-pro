@@ -3,7 +3,6 @@ import { Title } from "@solidjs/meta"
 import { onCleanup, onMount } from "solid-js"
 import logoLight from "../asset/logo-ornate-light.svg"
 import logoDark from "../asset/logo-ornate-dark.svg"
-import IMG_SPLASH from "../asset/lander/screenshot-splash.png"
 import { IconCopy, IconCheck } from "../component/icon"
 
 function CopyStatus() {
@@ -38,13 +37,13 @@ export default function Home() {
 
   return (
     <main data-page="home">
-      <Title>opencode | AI coding agent built for the terminal</Title>
+      <Title>opencode | AI coding agent built for the desktop and CLI</Title>
 
       <div data-component="content">
         <section data-component="top">
           <img data-slot="logo light" src={logoLight} alt="opencode logo light" />
           <img data-slot="logo dark" src={logoDark} alt="opencode logo dark" />
-          <h1 data-slot="title">The AI coding agent built for the terminal</h1>
+          <h1 data-slot="title">The AI coding agent built for the desktop and CLI</h1>
           <div data-slot="login">
             <a href="/auth">opencode zen</a>
           </div>
@@ -72,9 +71,6 @@ export default function Home() {
 
         <section data-component="features">
           <ul data-slot="list">
-            <li>
-              <strong>Native TUI</strong> A responsive, native, themeable terminal UI
-            </li>
             <li>
               <strong>LSP enabled</strong> Automatically loads the right LSPs for the LLM
             </li>
@@ -138,15 +134,6 @@ export default function Home() {
               <CopyStatus />
             </button>
           </div>
-        </section>
-
-        <section data-component="screenshots">
-          <figure>
-            <figcaption>opencode TUI with the tokyonight theme</figcaption>
-            <a href="/docs/cli">
-              <img src={IMG_SPLASH} alt="opencode TUI with tokyonight theme" />
-            </a>
-          </figure>
         </section>
 
         <footer data-component="footer">

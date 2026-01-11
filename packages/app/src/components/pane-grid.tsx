@@ -705,11 +705,7 @@ export function PaneGrid(props: PaneGridProps) {
       </div>
 
       {/* Overlay layer for box-resize animations */}
-      <div
-        ref={overlayRef}
-        class="absolute inset-0 z-30"
-        classList={{ "pointer-events-none": !maximizedPaneId() }}
-      />
+      <div ref={overlayRef} class="absolute inset-0 z-30" classList={{ "pointer-events-none": !maximizedPaneId() }} />
 
       <Show when={!maximizedPaneId()}>
         {/* Corner resize handles */}
