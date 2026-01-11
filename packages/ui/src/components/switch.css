@@ -92,8 +92,8 @@
 
   &[data-checked] [data-slot="switch-control"] {
     box-sizing: border-box;
-    border-color: var(--icon-strong-base);
-    background-color: var(--icon-strong-base);
+    border-color: var(--icon-success-base);
+    background-color: var(--icon-success-base);
   }
 
   &[data-checked] [data-slot="switch-thumb"] {
@@ -103,8 +103,8 @@
   }
 
   &[data-checked]:hover:not([data-disabled], [data-readonly]) [data-slot="switch-control"] {
-    border-color: var(--border-hover);
-    background-color: var(--surface-hover);
+    border-color: var(--icon-success-hover);
+    background-color: var(--icon-success-hover);
   }
 
   &[data-disabled] {

@@ -6,13 +6,16 @@ export interface DialogProps extends ParentProps {
   title?: JSXElement
   description?: JSXElement
   action?: JSXElement
+  size?: "md" | "lg"
   class?: ComponentProps<"div">["class"]
   classList?: ComponentProps<"div">["classList"]
 }
 
 export function Dialog(props: DialogProps) {
+  const size = () => props.size ?? "md"
+
   return (
-    <div data-component="dialog">
+    <div data-component="dialog" data-size={size()}>
       <div data-slot="dialog-container">
         <Kobalte.Content
           data-slot="dialog-content"

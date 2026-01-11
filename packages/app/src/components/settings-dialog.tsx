@@ -86,7 +86,7 @@ export const SettingsDialog: Component = () => {
   const activeMode = createMemo(() => modes().find((mode) => mode.id === activeModeId()))
 
   return (
-    <Dialog title="Settings" description="Configure session behavior and mode preferences.">
+    <Dialog title="Settings" description="Configure session behavior and mode preferences." size="lg">
       <div class="flex gap-4 px-2.5 pb-3">
         <div class="flex flex-col gap-1 min-w-24">
           <button
