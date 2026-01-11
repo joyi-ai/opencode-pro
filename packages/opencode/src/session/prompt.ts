@@ -528,6 +528,7 @@ export namespace SessionPrompt {
 
       // pending compaction
       if (task?.type === "compaction") {
+        if (ClaudeAgent.isClaudeAgentModel(model.providerID) || lastUser.claudeCodeFlow === true) continue
         if (model.providerID === "codex") continue
         const result = await SessionCompaction.process({
           messages: msgs,
@@ -545,6 +546,8 @@ export namespace SessionPrompt {
         model.providerID !== "codex" &&
         lastFinished &&
         lastFinished.summary !== true &&
+        !ClaudeAgent.isClaudeAgentModel(model.providerID) &&
+        lastUser.claudeCodeFlow !== true &&
         (await SessionCompaction.isOverflow({ tokens: lastFinished.tokens, model }))
       ) {
         await SessionCompaction.create({
@@ -1996,10 +1999,10 @@ export namespace SessionPrompt {
     history: MessageV2.WithParts[]
     providerID: string
     modelID: string
-  }) {
-    if (input.providerID === "codex") return
-    if (input.session.parentID) return
-    if (!Session.isDefaultTitle(input.session.title)) return
+    }) {
+      if (input.providerID === "codex") return
+      if (input.session.parentID) return
+      if (!Session.isDefaultTitle(input.session.title)) return
 
     // Find first non-synthetic user message
     const firstRealUserIdx = input.history.findIndex(

@@ -129,11 +129,8 @@ export function SessionPane(props: SessionPaneProps) {
       () => working(),
       (isWorking, prevWorking) => {
         if (props.mode !== "multi") return
-        if (isWorking) {
-          setStore("stepsExpanded", true)
-        } else if (prevWorking) {
-          setStore("stepsExpanded", false)
-        }
+        if (isWorking) return
+        if (prevWorking) setStore("stepsExpanded", false)
       },
     ),
   )
