@@ -330,6 +330,27 @@ export function SessionTurn(
     return result
   })
 
+  const inlineToolParts = createMemo(() => {
+    const result: { part: ToolPart; message: AssistantMessage }[] = []
+    for (const item of allToolParts()) {
+      const tool = item.part.tool.toLowerCase()
+      if (tool === "askuserquestion" || tool === "exitplanmode") {
+        result.push(item)
+      }
+    }
+    return result
+  })
+
+  const stepsToolParts = createMemo(() => {
+    const result: { part: ToolPart; message: AssistantMessage }[] = []
+    for (const item of allToolParts()) {
+      const tool = item.part.tool.toLowerCase()
+      if (tool === "askuserquestion" || tool === "exitplanmode") continue
+      result.push(item)
+    }
+    return result
+  })
+
   const permissions = createMemo(() => data.store.permission?.[props.sessionID] ?? emptyPermissions)
   const permissionCount = createMemo(() => permissions().length)
   const nextPermission = createMemo(() => permissions()[0])
@@ -607,15 +628,22 @@ export function SessionTurn(
                       </div>
                     </Show>
                     {/* Steps Container - unified for both collapsed and expanded */}
-                    <Show when={allToolParts().length > 0}>
+                    <Show when={stepsToolParts().length > 0}>
                       <StepsContainer
-                        toolParts={allToolParts()}
+                        toolParts={stepsToolParts()}
                         expanded={props.stepsExpanded ?? false}
                         working={working()}
                         status={store.status}
                         duration={store.duration}
                         onToggle={props.onStepsExpandedToggle ?? (() => {})}
                       />
+                    </Show>
+                    <Show when={inlineToolParts().length > 0}>
+                      <div data-slot="session-turn-inline-tools">
+                        <For each={inlineToolParts()}>
+                          {({ part, message }) => <Part part={part} message={message} defaultOpen />}
+                        </For>
+                      </div>
                     </Show>
                     <Show when={!props.stepsExpanded && permissionParts().length > 0}>
                       <div data-slot="session-turn-permission-parts">

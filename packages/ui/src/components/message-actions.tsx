@@ -1,4 +1,4 @@
-import { Show, splitProps, type ComponentProps } from "solid-js"
+import { Show, createSignal, onCleanup, splitProps, type ComponentProps } from "solid-js"
 import { IconButton } from "./icon-button"
 
 export type MessageActionHandlers = {
@@ -13,6 +13,35 @@ export function MessageActions(props: ComponentProps<"div"> & MessageActionHandl
   const hasRetry = () => !!local.onRetry
   const hasDelete = () => !!local.onDelete
   const hasActions = () => hasEdit() || hasRetry() || hasDelete()
+  const [confirmDelete, setConfirmDelete] = createSignal(false)
+  let confirmTimeout: ReturnType<typeof setTimeout> | undefined
+
+  const clearConfirm = () => {
+    if (confirmTimeout) {
+      clearTimeout(confirmTimeout)
+      confirmTimeout = undefined
+    }
+    setConfirmDelete(false)
+  }
+
+  onCleanup(() => {
+    if (confirmTimeout) clearTimeout(confirmTimeout)
+  })
+
+  const handleDelete = () => {
+    if (!local.onDelete) return
+    if (confirmDelete()) {
+      clearConfirm()
+      local.onDelete()
+      return
+    }
+    setConfirmDelete(true)
+    if (confirmTimeout) clearTimeout(confirmTimeout)
+    confirmTimeout = setTimeout(() => {
+      confirmTimeout = undefined
+      setConfirmDelete(false)
+    }, 2000)
+  }
 
   return (
     <Show when={hasActions()}>
@@ -36,7 +65,7 @@ export function MessageActions(props: ComponentProps<"div"> & MessageActionHandl
         <Show when={hasRetry()}>
           <IconButton
             variant="ghost"
-            icon="chevron-double-right"
+            icon="arrow-up"
             aria-label="Retry message"
             title="Retry"
             onClick={() => local.onRetry?.()}
@@ -46,9 +75,11 @@ export function MessageActions(props: ComponentProps<"div"> & MessageActionHandl
           <IconButton
             variant="ghost"
             icon="circle-x"
-            aria-label="Delete message"
-            title="Delete"
-            onClick={() => local.onDelete?.()}
+            aria-label={confirmDelete() ? "Confirm delete message" : "Delete message"}
+            title={confirmDelete() ? "Confirm delete" : "Delete"}
+            data-slot="message-action-delete"
+            data-confirm={confirmDelete() ? "true" : undefined}
+            onClick={handleDelete}
           />
         </Show>
       </div>

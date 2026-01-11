@@ -25,6 +25,7 @@ import { ContextTab } from "./context-tab"
 import { MobileView } from "./mobile-view"
 import { base64Decode } from "@opencode-ai/util/encode"
 import { getDirectory, getFilename } from "@opencode-ai/util/path"
+import { useNotification } from "@/context/notification"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 
 export type SessionPaneMode = "single" | "multi"
@@ -51,6 +52,7 @@ export function SessionPane(props: SessionPaneProps) {
   const layout = useLayout()
   const dialog = useDialog()
   const multiPane = props.mode === "multi" ? useMultiPane() : undefined
+  const notification = useNotification()
   const messageActions = useMessageActions()
   const hasMultiplePanes = createMemo(() =>
     props.mode === "multi" && multiPane ? multiPane.panes().length > 1 : false,
@@ -172,6 +174,14 @@ export function SessionPane(props: SessionPaneProps) {
       },
     ),
   )
+
+  createEffect(() => {
+    if (props.mode !== "multi") return
+    if (!isFocused()) return
+    const id = sessionId()
+    if (!id) return
+    notification.session.markViewed(id)
+  })
 
   // Session commands (only if enabled/focused)
   useSessionCommands({

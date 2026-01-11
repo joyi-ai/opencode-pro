@@ -31,13 +31,15 @@ export function useKeybindCapture(initialKeybind: string, options?: KeybindCaptu
     e.stopPropagation()
 
     const parts: string[] = []
-    if (e.ctrlKey || e.metaKey) parts.push("mod")
+    if (e.ctrlKey) parts.push("ctrl")
+    if (e.metaKey) parts.push("meta")
     if (e.altKey) parts.push("alt")
     if (e.shiftKey) parts.push("shift")
 
     const key = e.key.toLowerCase()
-    if (!["control", "meta", "alt", "shift"].includes(key)) {
-      parts.push(key)
+    const normalized = key === " " ? "space" : key === "spacebar" ? "space" : key
+    if (!["control", "meta", "alt", "shift"].includes(normalized)) {
+      parts.push(normalized)
       const newKeybind = parts.join("+")
       setCapturedKeybind(newKeybind)
       setIsCapturing(false)

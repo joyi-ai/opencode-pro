@@ -19,9 +19,6 @@
   gap: 4px;
   padding: 4px;
   border-radius: 8px;
-  background: var(--surface-raised-base);
-  border: 1px solid var(--border-weaker-base);
-  box-shadow: var(--shadow-xs-border);
   opacity: 0;
   transform: translateY(-2px);
   pointer-events: none;
@@ -35,6 +32,14 @@
   justify-content: flex-end;
   min-height: 32px;
   margin-top: 6px;
+}
+
+[data-component="message-actions"] [data-slot="message-action-delete"][data-confirm="true"] {
+  background-color: var(--surface-critical-weak);
+}
+
+[data-component="message-actions"] [data-slot="message-action-delete"][data-confirm="true"] [data-slot="icon-svg"] {
+  color: var(--icon-critical-base);
 }
 
 [data-component="message-wrapper"]:hover [data-component="message-actions"],

@@ -453,6 +453,8 @@ export interface ToolProps {
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
+  sessionID?: string
+  callID?: string
 }
 
 export type ToolComponent = Component<ToolProps>
@@ -565,6 +567,8 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
             hideDetails={props.hideDetails}
             forceOpen={forceOpen()}
             defaultOpen={props.defaultOpen}
+            sessionID={props.message.sessionID}
+            callID={part.callID}
           />
         </Match>
       </Switch>
@@ -1067,6 +1071,20 @@ ToolRegistry.register({
 
 ToolRegistry.register({
   name: "ExitPlanMode",
+  render(props) {
+    return <PlanReview {...props} />
+  },
+})
+
+ToolRegistry.register({
+  name: "askuserquestion",
+  render(props) {
+    return <AskUserQuestion {...props} />
+  },
+})
+
+ToolRegistry.register({
+  name: "exitplanmode",
   render(props) {
     return <PlanReview {...props} />
   },

@@ -8,6 +8,7 @@ import {
   createEffect,
   on,
   For,
+  onMount,
 } from "solid-js"
 import { useParams } from "@solidjs/router"
 import { Dialog } from "@opencode-ai/ui/dialog"
@@ -16,6 +17,7 @@ import { Button } from "@opencode-ai/ui/button"
 import { Icon } from "@opencode-ai/ui/icon"
 import { Switch } from "@opencode-ai/ui/switch"
 import { ProgressCircle } from "@opencode-ai/ui/progress-circle"
+import { Select } from "@opencode-ai/ui/select"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { usePermission } from "@/context/permission"
 import { useSDK } from "@/context/sdk"
@@ -84,6 +86,21 @@ export const SettingsDialog: Component = () => {
   )
 
   const activeMode = createMemo(() => modes().find((mode) => mode.id === activeModeId()))
+  const deviceOptions = createMemo(() => {
+    const devices = voice.state.availableDevices()
+    return [{ id: "default", label: "System Default" }, ...devices.map((device) => ({ id: device.id, label: device.label }))]
+  })
+  const currentDevice = createMemo(() => {
+    const options = deviceOptions()
+    const currentId = voice.settings.deviceId() ?? "default"
+    const match = options.find((option) => option.id === currentId)
+    if (match) return match
+    return options[0]
+  })
+
+  onMount(() => {
+    voice.actions.refreshDevices()
+  })
 
   return (
     <Dialog title="Settings" description="Configure session behavior and mode preferences." size="lg">
@@ -255,12 +272,40 @@ export const SettingsDialog: Component = () => {
                           </Button>
                         </div>
                       </Match>
-                    </SolidSwitch>
-                  </div>
+                  </SolidSwitch>
+                </div>
 
-                  <Show when={voice.state.modelStatus() === "ready"}>
-                    <div class="flex items-center gap-2">
-                      <span class="text-12-regular text-text-subtle">Hotkey:</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-12-regular text-text-subtle">Microphone:</span>
+                  <div class="flex-1">
+                    <Select
+                      options={deviceOptions()}
+                      current={currentDevice()}
+                      value={(option) => option.id}
+                      label={(option) => option.label}
+                      onSelect={(option) => {
+                        const deviceId = option?.id ?? "default"
+                        voice.settings.setDeviceId(deviceId === "default" ? null : deviceId)
+                      }}
+                      variant="ghost"
+                      size="small"
+                      class="justify-between"
+                      disabled={!voice.state.isSupported()}
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="small"
+                    onClick={() => voice.actions.refreshDevices()}
+                    disabled={!voice.state.isSupported()}
+                  >
+                    Refresh
+                  </Button>
+                </div>
+
+                <Show when={voice.state.modelStatus() === "ready"}>
+                  <div class="flex items-center gap-2">
+                    <span class="text-12-regular text-text-subtle">Hotkey:</span>
                       <button
                         type="button"
                         class="px-2 py-1 rounded bg-surface-raised-base border border-border-base text-12-regular text-text-base font-mono"

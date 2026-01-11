@@ -13,7 +13,6 @@ import path from "path"
 import { Instance } from "@/project/instance"
 import { Storage } from "@/storage/storage"
 import { Bus } from "@/bus"
-import { Locale } from "@/util/locale"
 
 import { LLM } from "./llm"
 import { Agent } from "@/agent/agent"
@@ -28,15 +27,9 @@ export namespace SessionSummary {
     }),
     async (input) => {
       const all = await Session.messages({ sessionID: input.sessionID })
-      const msg = all.find((m) => m.info.id === input.messageID)
-      if (!msg) {
-        await summarizeSession({ sessionID: input.sessionID, messages: all })
-        return
-      }
-      const isClaudeAgent = msg.info.role === "user" && msg.info.model.providerID === "claude-agent"
       await Promise.all([
         summarizeSession({ sessionID: input.sessionID, messages: all }),
-        ...(isClaudeAgent ? [] : [summarizeMessage({ messageID: input.messageID, messages: all })]),
+        summarizeMessage({ messageID: input.messageID, messages: all }),
       ])
     },
   )
@@ -75,22 +68,6 @@ export namespace SessionSummary {
     const msgWithParts = messages.find((m) => m.info.id === input.messageID)!
     const userMsg = msgWithParts.info as MessageV2.User
     const diffs = await computeDiff({ messages })
-    const textPart = msgWithParts.parts.find((p) => p.type === "text" && !p.synthetic) as MessageV2.TextPart | undefined
-    const text = textPart ? textPart.text : ""
-    const providerID = userMsg.model.providerID
-    if (providerID === "claude-agent" || providerID === "codex") {
-      const clean = text.replace(/\s+/g, " ").trim()
-      const title = clean ? Locale.truncate(clean, 80) : "New session"
-      const body = text ? Locale.truncate(text, 800) : ""
-      userMsg.summary = {
-        ...userMsg.summary,
-        diffs,
-        title,
-        ...(body ? { body } : {}),
-      }
-      await Session.updateMessage(userMsg)
-      return
-    }
     userMsg.summary = {
       ...userMsg.summary,
       diffs,
@@ -102,6 +79,7 @@ export namespace SessionSummary {
       (await Provider.getSmallModel(assistantMsg.providerID)) ??
       (await Provider.getModel(assistantMsg.providerID, assistantMsg.modelID))
 
+    const textPart = msgWithParts.parts.find((p) => p.type === "text" && !p.synthetic) as MessageV2.TextPart
     if (textPart && !userMsg.summary?.title) {
       const agent = await Agent.get("title")
       const stream = await LLM.stream({

@@ -1,4 +1,4 @@
-import { Component, Show, Match, Switch as SolidSwitch, createMemo } from "solid-js"
+import { Component, Show, Match, Switch as SolidSwitch, createMemo, onMount } from "solid-js"
 import { useParams } from "@solidjs/router"
 import { Popover } from "@opencode-ai/ui/popover"
 import { IconButton } from "@opencode-ai/ui/icon-button"
@@ -6,6 +6,7 @@ import { Button } from "@opencode-ai/ui/button"
 import { Icon } from "@opencode-ai/ui/icon"
 import { Switch } from "@opencode-ai/ui/switch"
 import { ProgressCircle } from "@opencode-ai/ui/progress-circle"
+import { Select } from "@opencode-ai/ui/select"
 import { usePermission } from "@/context/permission"
 import { useSDK } from "@/context/sdk"
 import { useSync } from "@/context/sync"
@@ -37,6 +38,21 @@ export const SettingsPopover: Component = () => {
   const isGitProject = createMemo(() => sync.data.vcs !== undefined)
   const hasPermissions = createMemo(() => permission.permissionsEnabled() && sessionID())
   const isDesktop = () => platform.platform === "desktop"
+  const deviceOptions = createMemo(() => {
+    const devices = voice.state.availableDevices()
+    return [{ id: "default", label: "System Default" }, ...devices.map((device) => ({ id: device.id, label: device.label }))]
+  })
+  const currentDevice = createMemo(() => {
+    const options = deviceOptions()
+    const currentId = voice.settings.deviceId() ?? "default"
+    const match = options.find((option) => option.id === currentId)
+    if (match) return match
+    return options[0]
+  })
+
+  onMount(() => {
+    voice.actions.refreshDevices()
+  })
 
   return (
     <Popover
@@ -175,6 +191,34 @@ export const SettingsPopover: Component = () => {
                   </div>
                 </Match>
               </SolidSwitch>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-12-regular text-text-subtle">Microphone:</span>
+              <div class="flex-1">
+                <Select
+                  options={deviceOptions()}
+                  current={currentDevice()}
+                  value={(option) => option.id}
+                  label={(option) => option.label}
+                  onSelect={(option) => {
+                    const deviceId = option?.id ?? "default"
+                    voice.settings.setDeviceId(deviceId === "default" ? null : deviceId)
+                  }}
+                  variant="ghost"
+                  size="small"
+                  class="justify-between"
+                  disabled={!voice.state.isSupported()}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => voice.actions.refreshDevices()}
+                disabled={!voice.state.isSupported()}
+              >
+                Refresh
+              </Button>
             </div>
 
             {/* Hotkey and Mode */}
