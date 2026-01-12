@@ -6,7 +6,7 @@ import { Switch } from "@opencode-ai/ui/switch"
 import { Tag } from "@opencode-ai/ui/tag"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { useLocal } from "@/context/local"
-import { useProviders } from "@/hooks/use-providers"
+import { popularProviders } from "@/hooks/use-providers"
 import type { ModeDefinition } from "@/modes/types"
 import { DialogEditMode } from "./dialog-edit-mode"
 
@@ -76,7 +76,6 @@ const InstallModeDialog: Component<{ mode: ModeDefinition; onInstalled?: () => v
 export const MegaSelector: Component<{ class?: string }> = (props) => {
   const dialog = useDialog()
   const local = useLocal()
-  const providers = useProviders()
   const [open, setOpen] = createSignal(false)
   const [modelSearch, setModelSearch] = createSignal("")
   const [isSearching, setIsSearching] = createSignal(false)
@@ -124,11 +123,10 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
     return Array.from(providerMap.values()).sort((a, b) => a.name.localeCompare(b.name))
   })
 
-  // Filter and sort models
+  // Filter models
   const models = createMemo(() => {
     let result = baseModels()
 
-    // Apply filters for opencode mode
     if (isOpencodeMode()) {
       // Provider filter
       const providerFilter = selectedProvider()
@@ -148,42 +146,73 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
       }
     }
 
-    // Sort: favorites first, then recent, then alphabetical
-    if (isOpencodeMode()) {
-      const favSet = new Set<string>()
-      const recentSet = new Set<string>()
+    return result
+  })
 
-      for (const m of result) {
-        if (local.model.favorite({ modelID: m.id, providerID: m.provider.id })) {
-          favSet.add(`${m.provider.id}:${m.id}`)
-        }
-      }
+  const modelGroups = createMemo(() => {
+    if (!isOpencodeMode()) return []
+    const all = models()
 
-      for (const r of recentModels()) {
-        if (!r) continue
-        const key = `${r.provider.id}:${r.id}`
-        if (!favSet.has(key)) {
-          recentSet.add(key)
-        }
-      }
+    const key = (m: (typeof all)[number]) => `${m.provider.id}:${m.id}`
 
-      result = result.slice().sort((a, b) => {
-        const aKey = `${a.provider.id}:${a.id}`
-        const bKey = `${b.provider.id}:${b.id}`
-        const aFav = favSet.has(aKey)
-        const bFav = favSet.has(bKey)
-        const aRecent = recentSet.has(aKey)
-        const bRecent = recentSet.has(bKey)
-
-        if (aFav && !bFav) return -1
-        if (!aFav && bFav) return 1
-        if (aRecent && !bRecent) return -1
-        if (!aRecent && bRecent) return 1
-        return a.name.localeCompare(b.name)
-      })
+    const byKey = new Map<string, (typeof all)[number]>()
+    for (const m of all) {
+      byKey.set(key(m), m)
     }
 
-    return result
+    const favorites = all
+      .filter((m) => local.model.favorite({ modelID: m.id, providerID: m.provider.id }))
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    const favoriteSet = new Set<string>(favorites.map(key))
+
+    const isDefined = <T,>(value: T | undefined | null): value is T => value !== undefined && value !== null
+
+    const recent = recentModels()
+      .filter(isDefined)
+      .map((m) => byKey.get(`${m.provider.id}:${m.id}`))
+      .filter(isDefined)
+      .filter((m) => !favoriteSet.has(key(m)))
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    const recentSet = new Set<string>(recent.map(key))
+
+    const providerMap = new Map<string, { id: string; name: string; models: (typeof all)[number][] }>()
+    for (const m of all) {
+      const k = key(m)
+      if (favoriteSet.has(k)) continue
+      if (recentSet.has(k)) continue
+      const existing = providerMap.get(m.provider.id)
+      if (existing) {
+        existing.models.push(m)
+        continue
+      }
+      providerMap.set(m.provider.id, { id: m.provider.id, name: m.provider.name, models: [m] })
+    }
+
+    const providers = Array.from(providerMap.values())
+      .map((p) => ({
+        kind: "provider" as const,
+        title: p.name,
+        providerID: p.id,
+        models: p.models.slice().sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => {
+        const aPopular = popularProviders.includes(a.providerID)
+        const bPopular = popularProviders.includes(b.providerID)
+        if (aPopular && !bPopular) return -1
+        if (!aPopular && bPopular) return 1
+        if (aPopular && bPopular) return popularProviders.indexOf(a.providerID) - popularProviders.indexOf(b.providerID)
+        return a.title.localeCompare(b.title)
+      })
+
+    return [
+      ...(favorites.length > 0 ? [{ kind: "favorites" as const, title: "Favorites", models: favorites }] : []),
+      ...(recent.length > 0 ? [{ kind: "recent" as const, title: "Recent", models: recent }] : []),
+      ...providers,
+    ]
   })
 
   const currentModel = createMemo(() => local.model.current())
@@ -397,65 +426,129 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
                 </Show>
               </Show>
               <div class="flex flex-col gap-0.5 flex-1 overflow-y-auto">
-                <For each={models()}>
-                  {(model) => {
-                    const isCurrent = createMemo(
-                      () => currentModel()?.id === model.id && currentModel()?.provider.id === model.provider.id,
-                    )
-                    const isFavorite = createMemo(() =>
-                      local.model.favorite({ modelID: model.id, providerID: model.provider.id }),
-                    )
-                    return (
-                      <div class="group flex items-center">
-                        <button
-                          type="button"
-                          class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-raised-base-hover text-left min-w-0"
-                          classList={{ "bg-surface-info-base dark:bg-blue-500/40": isCurrent() }}
-                          onClick={() => {
-                            local.model.set({ modelID: model.id, providerID: model.provider.id }, { recent: true })
-                          }}
-                        >
-                          <span
-                            class="flex-1 text-13-regular truncate"
-                            classList={{
-                              "text-text-info-base": isCurrent(),
-                              "text-text-strong": !isCurrent(),
-                            }}
-                          >
-                            {model.name}
-                          </span>
-                          <Show when={model.latest}>
-                            <Tag>Latest</Tag>
-                          </Show>
-                        </button>
-                        <Show when={isOpencodeMode()}>
-                          <button
-                            type="button"
-                            class="p-1 rounded hover:bg-surface-raised-base-hover shrink-0"
-                            classList={{
-                              "opacity-0 group-hover:opacity-100": !isFavorite(),
-                              "opacity-100": isFavorite(),
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              local.model.toggleFavorite({ modelID: model.id, providerID: model.provider.id })
-                            }}
-                            title={isFavorite() ? "Remove from favorites" : "Add to favorites"}
-                          >
-                            <Icon
-                              name="check"
-                              size="small"
-                              classList={{
-                                "text-icon-success-base": isFavorite(),
-                                "text-icon-weak": !isFavorite(),
+                <Show
+                  when={isOpencodeMode()}
+                  fallback={
+                    <For each={models()}>
+                      {(model) => {
+                        const isCurrent = createMemo(
+                          () => currentModel()?.id === model.id && currentModel()?.provider.id === model.provider.id,
+                        )
+                        return (
+                          <div class="group flex items-center">
+                            <button
+                              type="button"
+                              class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-raised-base-hover text-left min-w-0"
+                              classList={{ "bg-surface-info-base dark:bg-blue-500/40": isCurrent() }}
+                              onClick={() => {
+                                local.model.set({ modelID: model.id, providerID: model.provider.id }, { recent: true })
                               }}
-                            />
-                          </button>
-                        </Show>
-                      </div>
-                    )
-                  }}
-                </For>
+                            >
+                              <span
+                                class="flex-1 text-13-regular truncate"
+                                classList={{
+                                  "text-text-info-base": isCurrent(),
+                                  "text-text-strong": !isCurrent(),
+                                }}
+                              >
+                                {model.name}
+                              </span>
+                              <Show when={model.provider.id === "opencode" && (!model.cost || model.cost?.input === 0)}>
+                                <Tag>Free</Tag>
+                              </Show>
+                              <Show when={model.latest}>
+                                <Tag>Latest</Tag>
+                              </Show>
+                            </button>
+                          </div>
+                        )
+                      }}
+                    </For>
+                  }
+                >
+                  <For each={modelGroups()}>
+                    {(group) => {
+                      const showProvider = group.kind !== "provider"
+                      return (
+                        <div class="flex flex-col">
+                          <div class="sticky top-0 z-10 px-2 py-1 text-11-regular text-text-subtle bg-surface-raised-stronger-non-alpha">
+                            {group.title}
+                          </div>
+                          <For each={group.models}>
+                            {(model) => {
+                              const isCurrent = createMemo(
+                                () =>
+                                  currentModel()?.id === model.id && currentModel()?.provider.id === model.provider.id,
+                              )
+                              const isFavorite = createMemo(() =>
+                                local.model.favorite({ modelID: model.id, providerID: model.provider.id }),
+                              )
+                              return (
+                                <div class="group flex items-center">
+                                  <button
+                                    type="button"
+                                    class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-raised-base-hover text-left min-w-0"
+                                    classList={{ "bg-surface-info-base dark:bg-blue-500/40": isCurrent() }}
+                                    onClick={() => {
+                                      local.model.set({ modelID: model.id, providerID: model.provider.id }, { recent: true })
+                                    }}
+                                  >
+                                    <span
+                                      class="flex-1 text-13-regular truncate"
+                                      classList={{
+                                        "text-text-info-base": isCurrent(),
+                                        "text-text-strong": !isCurrent(),
+                                      }}
+                                    >
+                                      {model.name}
+                                    </span>
+                                    <Show when={showProvider}>
+                                      <span class="text-11-regular text-text-weak truncate max-w-[96px]">
+                                        {model.provider.name}
+                                      </span>
+                                    </Show>
+                                    <Show
+                                      when={
+                                        model.provider.id === "opencode" && (!model.cost || model.cost?.input === 0)
+                                      }
+                                    >
+                                      <Tag>Free</Tag>
+                                    </Show>
+                                    <Show when={model.latest}>
+                                      <Tag>Latest</Tag>
+                                    </Show>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    class="p-1 rounded hover:bg-surface-raised-base-hover shrink-0"
+                                    classList={{
+                                      "opacity-0 group-hover:opacity-100": !isFavorite(),
+                                      "opacity-100": isFavorite(),
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      local.model.toggleFavorite({ modelID: model.id, providerID: model.provider.id })
+                                    }}
+                                    title={isFavorite() ? "Remove from favorites" : "Add to favorites"}
+                                  >
+                                    <Icon
+                                      name="check"
+                                      size="small"
+                                      classList={{
+                                        "text-icon-success-base": isFavorite(),
+                                        "text-icon-weak": !isFavorite(),
+                                      }}
+                                    />
+                                  </button>
+                                </div>
+                              )
+                            }}
+                          </For>
+                        </div>
+                      )
+                    }}
+                  </For>
+                </Show>
                 <Show when={models().length === 0}>
                   <div class="px-2 py-3 text-12-regular text-text-weak text-center">No models found</div>
                 </Show>
