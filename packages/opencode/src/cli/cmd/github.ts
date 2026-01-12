@@ -396,7 +396,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run opencode
-        uses: joyi-ai/openagent/github@latest${envStr}
+        uses: joyi-ai/openpoo/github@latest${envStr}
         with:
           model: ${provider}/${model}`,
             )

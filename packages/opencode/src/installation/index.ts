@@ -95,7 +95,7 @@ export namespace Installation {
 
     for (const check of checks) {
       const output = await check.command()
-      if (output.includes(check.name === "brew" ? "opencode" : "@joyi-ai/openagent")) {
+      if (output.includes(check.name === "brew" ? "opencode" : "@joyi-ai/openpoo")) {
         return check.name
       }
     }
@@ -128,13 +128,13 @@ export namespace Installation {
         })
         break
       case "npm":
-        cmd = $`npm install -g @joyi-ai/openagent@${target}`
+        cmd = $`npm install -g @joyi-ai/openpoo@${target}`
         break
       case "pnpm":
-        cmd = $`pnpm install -g @joyi-ai/openagent@${target}`
+        cmd = $`pnpm install -g @joyi-ai/openpoo@${target}`
         break
       case "bun":
-        cmd = $`bun install -g @joyi-ai/openagent@${target}`
+        cmd = $`bun install -g @joyi-ai/openpoo@${target}`
         break
       case "brew": {
         const formula = await getBrewFormula()
@@ -187,7 +187,7 @@ export namespace Installation {
         return reg.endsWith("/") ? reg.slice(0, -1) : reg
       })
       const channel = CHANNEL
-      return fetch(`${registry}/@joyi-ai/openagent/${channel}`)
+      return fetch(`${registry}/@joyi-ai/openpoo/${channel}`)
         .then((res) => {
           if (!res.ok) throw new Error(res.statusText)
           return res.json()
@@ -195,7 +195,7 @@ export namespace Installation {
         .then((data: any) => data.version)
     }
 
-    return fetch("https://api.github.com/repos/joyi-ai/openagent/releases/latest")
+    return fetch("https://api.github.com/repos/joyi-ai/openpoo/releases/latest")
       .then((res) => {
         if (!res.ok) throw new Error(res.statusText)
         return res.json()

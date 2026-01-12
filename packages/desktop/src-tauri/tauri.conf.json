@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OpenAgent Dev",
-  "identifier": "ai.openagent.desktop.dev",
-  "mainBinaryName": "OpenAgent",
+  "productName": "OpenPoo Dev",
+  "identifier": "ai.openpoo.desktop.dev",
+  "mainBinaryName": "OpenPoo",
   "version": "../package.json",
   "build": {
     "beforeDevCommand": "bun run dev",

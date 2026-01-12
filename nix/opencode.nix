@@ -94,7 +94,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
       OpenCode is an AI coding agent with a TypeScript/JavaScript core.
       It provides a local server for tooling integrations and a desktop app UI.
     '';
-    homepage = "https://github.com/joyi-ai/openagent";
+    homepage = "https://github.com/joyi-ai/openpoo";
     license = lib.licenses.mit;
     platforms = [
       "aarch64-linux"

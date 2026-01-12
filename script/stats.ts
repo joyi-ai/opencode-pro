@@ -73,7 +73,7 @@ async function fetchReleases(): Promise<Release[]> {
   const per = 100
 
   while (true) {
-    const url = `https://api.github.com/repos/joyi-ai/openagent/releases?page=${page}&per_page=${per}`
+    const url = `https://api.github.com/repos/joyi-ai/openpoo/releases?page=${page}&per_page=${per}`
 
     const response = await fetch(url)
     if (!response.ok) {
@@ -188,15 +188,15 @@ async function save(githubTotal: number, npmDownloads: number) {
   )
 }
 
-console.log("Fetching GitHub releases for joyi-ai/openagent...\n")
+console.log("Fetching GitHub releases for joyi-ai/openpoo...\n")
 
 const releases = await fetchReleases()
 console.log(`\nFetched ${releases.length} releases total\n`)
 
 const { total: githubTotal, stats } = calculate(releases)
 
-console.log("Fetching npm all-time downloads for @joyi-ai/openagent...\n")
-const npmDownloads = await fetchNpmDownloads("@joyi-ai/openagent")
+console.log("Fetching npm all-time downloads for @joyi-ai/openpoo...\n")
+const npmDownloads = await fetchNpmDownloads("@joyi-ai/openpoo")
 console.log(`Fetched npm all-time downloads: ${npmDownloads.toLocaleString()}\n`)
 
 await save(githubTotal, npmDownloads)
