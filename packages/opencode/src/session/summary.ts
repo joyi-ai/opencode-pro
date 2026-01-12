@@ -20,6 +20,38 @@ import { Agent } from "@/agent/agent"
 export namespace SessionSummary {
   const log = Log.create({ service: "session.summary" })
 
+  async function resolveOpencodeSmallModel() {
+    const providers = await Provider.list()
+    const provider = providers["opencode"]
+    if (!provider) return undefined
+    const model = provider.models["gpt-5-nano"]
+    if (model) return model
+    return undefined
+  }
+
+  async function resolveSummaryModel(input: {
+    providerID: string
+    modelID: string
+    agent?: Agent.Info
+  }) {
+    if (input.agent?.model) {
+      const agentModel = await Provider.getModel(input.agent.model.providerID, input.agent.model.modelID)
+      if (agentModel.providerID !== "codex") return agentModel
+    }
+    if (input.providerID !== "codex") {
+      const small = await Provider.getSmallModel(input.providerID)
+      if (small && small.providerID !== "codex") return small
+      const fallback = await resolveOpencodeSmallModel()
+      if (fallback) return fallback
+      return Provider.getModel(input.providerID, input.modelID)
+    }
+    const small = await Provider.getSmallModel(input.providerID)
+    if (small && small.providerID !== "codex") return small
+    const fallback = await resolveOpencodeSmallModel()
+    if (fallback) return fallback
+    return undefined
+  }
+
   export const summarize = fn(
     z.object({
       sessionID: z.string(),
@@ -75,39 +107,43 @@ export namespace SessionSummary {
     await Session.updateMessage(userMsg)
 
     const assistantMsg = messages.find((m) => m.info.role === "assistant")!.info as MessageV2.Assistant
-    const small =
-      (await Provider.getSmallModel(assistantMsg.providerID)) ??
-      (await Provider.getModel(assistantMsg.providerID, assistantMsg.modelID))
 
     const textPart = msgWithParts.parts.find((p) => p.type === "text" && !p.synthetic) as MessageV2.TextPart
     if (textPart && !userMsg.summary?.title) {
       const agent = await Agent.get("title")
-      const stream = await LLM.stream({
+      const model = await resolveSummaryModel({
+        providerID: assistantMsg.providerID,
+        modelID: assistantMsg.modelID,
         agent,
-        user: userMsg,
-        tools: {},
-        model: agent.model ? await Provider.getModel(agent.model.providerID, agent.model.modelID) : small,
-        small: true,
-        messages: [
-          {
-            role: "user" as const,
-            content: `
+      })
+      if (model) {
+        const stream = await LLM.stream({
+          agent,
+          user: userMsg,
+          tools: {},
+          model,
+          small: true,
+          messages: [
+            {
+              role: "user" as const,
+              content: `
               The following is the text to summarize:
               <text>
               ${textPart?.text ?? ""}
               </text>
             `,
-          },
-        ],
-        abort: new AbortController().signal,
-        sessionID: userMsg.sessionID,
-        system: [],
-        retries: 3,
-      })
-      const result = await stream.text
-      log.info("title", { title: result })
-      userMsg.summary.title = result
-      await Session.updateMessage(userMsg)
+            },
+          ],
+          abort: new AbortController().signal,
+          sessionID: userMsg.sessionID,
+          system: [],
+          retries: 3,
+        })
+        const result = await stream.text
+        log.info("title", { title: result })
+        userMsg.summary.title = result
+        await Session.updateMessage(userMsg)
+      }
     }
 
     if (
@@ -125,29 +161,34 @@ export namespace SessionSummary {
           }
         }
         const summaryAgent = await Agent.get("summary")
-        const stream = await LLM.stream({
+        const model = await resolveSummaryModel({
+          providerID: assistantMsg.providerID,
+          modelID: assistantMsg.modelID,
           agent: summaryAgent,
-          user: userMsg,
-          tools: {},
-          model: summaryAgent.model
-            ? await Provider.getModel(summaryAgent.model.providerID, summaryAgent.model.modelID)
-            : small,
-          small: true,
-          messages: [
-            ...MessageV2.toModelMessage(messages),
-            {
-              role: "user" as const,
-              content: `Summarize the above conversation according to your system prompts.`,
-            },
-          ],
-          abort: new AbortController().signal,
-          sessionID: userMsg.sessionID,
-          system: [],
-          retries: 3,
         })
-        const result = await stream.text
-        if (result) {
-          userMsg.summary.body = result
+        if (model) {
+          const stream = await LLM.stream({
+            agent: summaryAgent,
+            user: userMsg,
+            tools: {},
+            model,
+            small: true,
+            messages: [
+              ...MessageV2.toModelMessage(messages),
+              {
+                role: "user" as const,
+                content: `Summarize the above conversation according to your system prompts.`,
+              },
+            ],
+            abort: new AbortController().signal,
+            sessionID: userMsg.sessionID,
+            system: [],
+            retries: 3,
+          })
+          const result = await stream.text
+          if (result) {
+            userMsg.summary.body = result
+          }
         }
       }
       await Session.updateMessage(userMsg)

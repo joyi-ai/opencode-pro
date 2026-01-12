@@ -75,13 +75,12 @@ function GlobalReviewSynced(props: { paneId: string; directory: string; sessionI
   const sessionKey = createMemo(
     () => `multi-${props.paneId}-${props.directory}${props.sessionId ? "/" + props.sessionId : ""}`,
   )
-  const view = createMemo(() => layout.view(sessionKey()))
   const tabs = createMemo(() => layout.tabs(sessionKey()))
   const contextOpen = createMemo(() => tabs().active() === "context" || tabs().all().includes("context"))
   const diffs = createMemo(() => (props.sessionId ? (sync.data.session_diff[props.sessionId] ?? []) : []))
   const sessionInfo = createMemo(() => (props.sessionId ? sync.session.get(props.sessionId) : undefined))
   const showReview = createMemo(
-    () => view().reviewPanel.opened() && (diffs().length > 0 || tabs().all().length > 0 || contextOpen()),
+    () => diffs().length > 0 || tabs().all().length > 0 || contextOpen(),
   )
 
   return (

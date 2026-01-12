@@ -35,6 +35,7 @@ import { $, fileURLToPath } from "bun"
 import { pathToFileURL } from "url"
 import { ConfigMarkdown } from "../config/markdown"
 import { SessionSummary } from "./summary"
+import { Snapshot } from "@/snapshot"
 import { NamedError } from "@opencode-ai/util/error"
 import { fn } from "@/util/fn"
 import { SessionProcessor } from "./processor"
@@ -43,7 +44,6 @@ import { Tool } from "@/tool/tool"
 import { PermissionNext } from "@/permission/next"
 import { SessionStatus } from "./status"
 import { LLM } from "./llm"
-import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
 import { ClaudeAgentProcessor } from "./claude-agent-processor"
 import { ClaudeAgent } from "@/provider/claude-agent"
@@ -403,6 +403,54 @@ export namespace SessionPrompt {
 
   async function runLoop(sessionID: string, session: Session.Info, abort: AbortSignal): Promise<MessageV2.WithParts> {
     let step = 0
+    const startStep = async (messageID: string) => {
+      const snapshot = await Snapshot.track()
+      await Session.updatePart({
+        id: Identifier.ascending("part"),
+        messageID,
+        sessionID,
+        snapshot,
+        type: "step-start",
+      })
+      return snapshot
+    }
+    const finishStep = async (input: {
+      messageID: string
+      snapshot?: string
+      finish: string
+      tokens: MessageV2.Assistant["tokens"]
+      cost: number
+      userMessageID: string
+    }) => {
+      const snapshot = await Snapshot.track()
+      await Session.updatePart({
+        id: Identifier.ascending("part"),
+        reason: input.finish,
+        snapshot,
+        messageID: input.messageID,
+        sessionID,
+        type: "step-finish",
+        tokens: input.tokens,
+        cost: input.cost,
+      })
+      if (input.snapshot) {
+        const patch = await Snapshot.patch(input.snapshot)
+        if (patch.files.length > 0) {
+          await Session.updatePart({
+            id: Identifier.ascending("part"),
+            messageID: input.messageID,
+            sessionID,
+            type: "patch",
+            hash: patch.hash,
+            files: patch.files,
+          })
+        }
+      }
+      SessionSummary.summarize({
+        sessionID,
+        messageID: input.userMessageID,
+      })
+    }
     while (true) {
       SessionStatus.set(sessionID, { type: "busy" })
       log.info("loop", { step, sessionID })
@@ -676,6 +724,7 @@ export namespace SessionPrompt {
           },
           sessionID,
         })) as MessageV2.Assistant
+        const stepSnapshot = await startStep(assistantMessage.id)
 
         // Extract prompt text and images from user message parts
         const userParts = await MessageV2.parts({ sessionID, messageID: lastUser.id })
@@ -748,6 +797,14 @@ export namespace SessionPrompt {
           assistantMessage.tokens = result.tokens
           assistantMessage.time.completed = Date.now()
           await Session.updateMessage(assistantMessage)
+          await finishStep({
+            messageID: assistantMessage.id,
+            snapshot: stepSnapshot,
+            finish: result.finish,
+            tokens: result.tokens,
+            cost: result.cost,
+            userMessageID: lastUser.id,
+          })
 
           if (result.finish !== "end_turn" && result.finish !== "tool-calls") {
             break
@@ -766,6 +823,14 @@ export namespace SessionPrompt {
           }
           assistantMessage.time.completed = Date.now()
           await Session.updateMessage(assistantMessage)
+          await finishStep({
+            messageID: assistantMessage.id,
+            snapshot: stepSnapshot,
+            finish: assistantMessage.finish ?? "error",
+            tokens: assistantMessage.tokens,
+            cost: assistantMessage.cost,
+            userMessageID: lastUser.id,
+          })
           break
         }
         continue
@@ -797,6 +862,7 @@ export namespace SessionPrompt {
           },
           sessionID,
         })) as MessageV2.Assistant
+        const stepSnapshot = await startStep(assistantMessage.id)
 
         const userParts = await MessageV2.parts({ sessionID, messageID: lastUser.id })
         const promptText = userParts
@@ -835,6 +901,14 @@ export namespace SessionPrompt {
         if (!result) {
           assistantMessage.time.completed = Date.now()
           await Session.updateMessage(assistantMessage)
+          await finishStep({
+            messageID: assistantMessage.id,
+            snapshot: stepSnapshot,
+            finish: assistantMessage.finish ?? "error",
+            tokens: assistantMessage.tokens,
+            cost: assistantMessage.cost,
+            userMessageID: lastUser.id,
+          })
           break
         }
 
@@ -843,6 +917,14 @@ export namespace SessionPrompt {
         assistantMessage.tokens = result.tokens
         assistantMessage.time.completed = Date.now()
         await Session.updateMessage(assistantMessage)
+        await finishStep({
+          messageID: assistantMessage.id,
+          snapshot: stepSnapshot,
+          finish: result.finish,
+          tokens: result.tokens,
+          cost: result.cost,
+          userMessageID: lastUser.id,
+        })
 
         if (result.finish !== "end_turn" && result.finish !== "tool-calls") {
           break
@@ -2108,13 +2190,44 @@ export namespace SessionPrompt {
     return result
   }
 
+  async function resolveOpencodeSmallModel() {
+    const providers = await Provider.list()
+    const provider = providers["opencode"]
+    if (!provider) return undefined
+    const model = provider.models["gpt-5-nano"]
+    if (model) return model
+    return undefined
+  }
+
+  async function resolveTitleModel(input: {
+    providerID: string
+    modelID: string
+    agent: Agent.Info
+  }) {
+    if (input.agent.model) {
+      const agentModel = await Provider.getModel(input.agent.model.providerID, input.agent.model.modelID)
+      if (agentModel.providerID !== "codex") return agentModel
+    }
+    if (input.providerID !== "codex") {
+      const small = await Provider.getSmallModel(input.providerID)
+      if (small && small.providerID !== "codex") return small
+      const fallback = await resolveOpencodeSmallModel()
+      if (fallback) return fallback
+      return Provider.getModel(input.providerID, input.modelID)
+    }
+    const small = await Provider.getSmallModel(input.providerID)
+    if (small && small.providerID !== "codex") return small
+    const fallback = await resolveOpencodeSmallModel()
+    if (fallback) return fallback
+    return undefined
+  }
+
   async function ensureTitle(input: {
     session: Session.Info
     history: MessageV2.WithParts[]
     providerID: string
     modelID: string
   }) {
-    if (input.providerID === "codex") return
     if (input.session.parentID) return
     if (!Session.isDefaultTitle(input.session.title)) return
 
@@ -2141,18 +2254,19 @@ export namespace SessionPrompt {
 
     const agent = await Agent.get("title")
     if (!agent) return
+    const model = await resolveTitleModel({
+      providerID: input.providerID,
+      modelID: input.modelID,
+      agent,
+    })
+    if (!model) return
     const result = await LLM.stream({
       agent,
       user: firstRealUser.info as MessageV2.User,
       system: [],
       small: true,
       tools: {},
-      model: await iife(async () => {
-        if (agent.model) return await Provider.getModel(agent.model.providerID, agent.model.modelID)
-        return (
-          (await Provider.getSmallModel(input.providerID)) ?? (await Provider.getModel(input.providerID, input.modelID))
-        )
-      }),
+      model,
       abort: new AbortController().signal,
       sessionID: input.session.id,
       retries: 2,

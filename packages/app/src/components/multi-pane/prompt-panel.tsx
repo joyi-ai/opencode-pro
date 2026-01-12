@@ -1,4 +1,5 @@
-import { For, Show, createEffect, createMemo, on, onCleanup, onMount } from "solid-js"
+import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount, untrack } from "solid-js"
+import { createStore, produce } from "solid-js/store"
 import { useMultiPane } from "@/context/multi-pane"
 import { useLayout } from "@/context/layout"
 import { useTerminal, type LocalPTY } from "@/context/terminal"
@@ -11,9 +12,11 @@ import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { Tabs } from "@opencode-ai/ui/tabs"
 import { IconButton } from "@opencode-ai/ui/icon-button"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
+import { Persist, persisted } from "@/utils/persist"
 import { paneCache } from "./pane-cache"
 
 const MAX_TERMINAL_HEIGHT = 200
+const MAX_SESSION_CACHE = 50
 
 export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string }) {
   const multiPane = useMultiPane()
@@ -29,6 +32,19 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
 
   let editorRef: HTMLDivElement | undefined
 
+  type SessionCache = {
+    agent: string | undefined
+    model: { providerID: string; modelID: string } | undefined
+    variant: string | undefined
+    modeId: string | undefined
+    thinking: boolean | undefined
+  }
+
+  type SessionCacheStore = {
+    entries: Record<string, SessionCache>
+    used: Record<string, number>
+  }
+
   type PaneSnapshot = {
     prompt: Prompt
     promptDirty: boolean
@@ -40,37 +56,94 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
   }
 
   const paneSnapshots = new Map<string, PaneSnapshot>()
+  const [sessionStore, setSessionStore, _, sessionReady] = persisted(
+    Persist.global("pane-session", ["pane-session.v1"]),
+    createStore<SessionCacheStore>({
+      entries: {},
+      used: {},
+    }),
+  )
+  const [activeKey, setActiveKey] = createSignal<string | undefined>(undefined)
+  const [restoring, setRestoring] = createSignal(false)
 
   function handleSessionCreated(sessionId: string) {
     multiPane.updatePane(props.paneId, { sessionId })
   }
 
-  function restorePaneState(paneId: string) {
-    const cached = paneCache.get(paneId)
-    if (!cached) return
-    if (cached.modeId) local.mode.set(cached.modeId)
-    queueMicrotask(() => {
-      if (props.paneId !== paneId) return
-      if (cached.agent) local.agent.set(cached.agent)
-      if (cached.model) local.model.set(cached.model)
-      if (cached.variant !== undefined) local.model.variant.set(cached.variant)
-      if (cached.thinking !== undefined) local.model.thinking.set(cached.thinking)
-    })
-    if (cached.prompt && !prompt.dirty()) prompt.set(cached.prompt)
+  function sessionKeyFor(sessionId: string | undefined) {
+    if (!sessionId) return undefined
+    return `${sdk.directory}:${sessionId}`
   }
 
-  function snapshotPaneState() {
-    const currentPrompt = prompt.current()
+  function restorePaneState(paneId: string, session?: SessionCache, key?: string) {
+    const cached = paneCache.get(paneId)
+    setRestoring(true)
+    setActiveKey(key)
+    const modeId = cached?.modeId ?? session?.modeId
+    if (modeId) local.mode.set(modeId)
+    queueMicrotask(() => {
+      if (props.paneId !== paneId) {
+        setRestoring(false)
+        return
+      }
+      const agent = cached?.agent ?? session?.agent
+      if (agent) local.agent.set(agent)
+      const model = cached?.model ?? session?.model
+      if (model) local.model.set(model)
+      const variant = cached?.variant ?? session?.variant
+      if (variant !== undefined) local.model.variant.set(variant)
+      const thinking = cached?.thinking ?? session?.thinking
+      if (thinking !== undefined) local.model.thinking.set(thinking)
+      setRestoring(false)
+    })
+    if (cached?.prompt && !prompt.dirty()) prompt.set(cached.prompt)
+  }
+
+  function pruneSessionCache() {
+    const keys = Object.keys(sessionStore.entries)
+    if (keys.length <= MAX_SESSION_CACHE) return
+    const ordered = keys.slice().sort((a, b) => (sessionStore.used[b] ?? 0) - (sessionStore.used[a] ?? 0))
+    const drop = ordered.slice(MAX_SESSION_CACHE)
+    if (drop.length === 0) return
+    setSessionStore(
+      produce((draft) => {
+        for (const key of drop) {
+          delete draft.entries[key]
+          delete draft.used[key]
+        }
+      }),
+    )
+  }
+
+  function storeSessionState(key: string, next: SessionCache) {
+    setSessionStore("entries", key, next)
+    setSessionStore("used", key, Date.now())
+    pruneSessionCache()
+  }
+
+  function snapshotSessionState() {
     const currentAgent = local.agent.current()
     const currentModel = local.model.current()
     return {
-      prompt: currentPrompt,
-      promptDirty: prompt.dirty(),
       agent: currentAgent?.name,
       model: currentModel ? { providerID: currentModel.provider.id, modelID: currentModel.id } : undefined,
       variant: local.model.variant.current(),
       modeId: local.mode.current()?.id,
       thinking: local.model.thinking.current(),
+    }
+  }
+
+  function snapshotPaneState() {
+    const currentPrompt = prompt.current()
+    const session = snapshotSessionState()
+    return {
+      prompt: currentPrompt,
+      promptDirty: prompt.dirty(),
+      agent: session.agent,
+      model: session.model,
+      variant: session.variant,
+      modeId: session.modeId,
+      thinking: session.thinking,
     }
   }
 
@@ -99,8 +172,6 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
     delete cache.prompt
   }
 
-  restorePaneState(props.paneId)
-
   createEffect(() => {
     paneSnapshots.set(props.paneId, snapshotPaneState())
   })
@@ -110,11 +181,32 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
       () => props.paneId,
       (next, prev) => {
         if (prev) storePaneState(prev, paneSnapshots.get(prev))
-        if (next) restorePaneState(next)
       },
       { defer: true },
     ),
   )
+
+  createEffect(
+    on(
+      () => [props.paneId, props.sessionId, sdk.directory, sessionReady()],
+      () => {
+        const paneId = props.paneId
+        if (!paneId) return
+        const key = sessionKeyFor(props.sessionId)
+        const session = sessionReady() && key ? untrack(() => sessionStore.entries[key]) : undefined
+        restorePaneState(paneId, session, key)
+      },
+    ),
+  )
+
+  createEffect(() => {
+    const key = activeKey()
+    if (!key) return
+    if (restoring()) return
+    if (!sessionReady()) return
+    const next = snapshotSessionState()
+    storeSessionState(key, next)
+  })
 
   onCleanup(() => {
     storePaneState(props.paneId, paneSnapshots.get(props.paneId))
