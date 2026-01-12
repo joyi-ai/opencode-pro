@@ -50,6 +50,7 @@ import { usePermission } from "@/context/permission"
 import { Binary } from "@opencode-ai/util/binary"
 import { retry } from "@opencode-ai/util/retry"
 import { SDKProvider } from "@/context/sdk"
+import { LocalProvider } from "@/context/local"
 import { SyncProvider } from "@/context/sync"
 
 import { useDialog } from "@opencode-ai/ui/context/dialog"
@@ -824,6 +825,27 @@ export default function Layout(props: ParentProps) {
     ))
   }
 
+  function openSettings() {
+    const directory = mcpDirectory()
+    if (!directory) {
+      showToast({
+        variant: "error",
+        title: "Open a project",
+        description: "Open a project to access settings.",
+      })
+      return
+    }
+    dialog.show(() => (
+      <SDKProvider directory={directory}>
+        <SyncProvider>
+          <LocalProvider>
+            <SettingsDialog />
+          </LocalProvider>
+        </SyncProvider>
+      </SDKProvider>
+    ))
+  }
+
   function navigateToProject(directory: string | undefined) {
     if (!directory) return
     const lastSession = store.lastSession[directory]
@@ -1471,7 +1493,7 @@ export default function Layout(props: ParentProps) {
               variant="ghost"
               size="large"
               icon="settings-gear"
-              onClick={() => dialog.show(() => <SettingsDialog />)}
+              onClick={openSettings}
             >
               <Show when={expanded()}>Settings</Show>
             </Button>
