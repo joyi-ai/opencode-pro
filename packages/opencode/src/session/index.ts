@@ -545,14 +545,8 @@ export namespace Session {
     // Cache message info for part store
     MessageV2.PartStore.cacheMessageInfo(msg)
 
-    // Get current parts from cache (if any)
-    const parts = await MessageV2.PartStore.getParts(msg.sessionID, msg.id).catch(() => [])
-
-    // Write message with inline parts (new format)
-    await Storage.write(["message", msg.sessionID, msg.id], {
-      info: msg,
-      parts: parts.slice().sort((a, b) => (a.id > b.id ? 1 : -1)),
-    })
+    // Write message info only; parts are persisted separately
+    await Storage.write(["message", msg.sessionID, msg.id], { info: msg })
 
     Bus.publish(MessageV2.Event.Updated, {
       info: msg,

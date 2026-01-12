@@ -12,6 +12,7 @@ import { STATUS_CODES } from "http"
 import { iife } from "@/util/iife"
 import { type SystemError } from "bun"
 import { Log } from "@/util/log"
+import { StorageSqlite } from "@/storage/sqlite"
 
 export namespace MessageV2 {
   export const OutputLengthError = NamedError.create("MessageOutputLengthError", z.object({}))
@@ -718,12 +719,26 @@ export namespace MessageV2 {
       parts: Part[]
     }
 
+    type CacheEntry = {
+      parts: Part[]
+      index: Map<string, number>
+      dirtySort: boolean
+    }
+
     /**
      * Simple LRU cache with eviction callback
      */
+    type LruNode<K, V> = {
+      key: K
+      value: V
+      prev?: LruNode<K, V>
+      next?: LruNode<K, V>
+    }
+
     class LRUCache<K, V> {
-      private cache = new Map<K, V>()
-      private order: K[] = []
+      private cache = new Map<K, LruNode<K, V>>()
+      private head: LruNode<K, V> | undefined
+      private tail: LruNode<K, V> | undefined
 
       constructor(
         private maxSize: number,
@@ -731,34 +746,26 @@ export namespace MessageV2 {
       ) {}
 
       get(key: K): V | undefined {
-        const value = this.cache.get(key)
-        if (value !== undefined) {
-          // Move to end (most recently used)
-          const idx = this.order.indexOf(key)
-          if (idx > -1) {
-            this.order.splice(idx, 1)
-            this.order.push(key)
-          }
-        }
-        return value
+        const node = this.cache.get(key)
+        if (!node) return
+        this.touch(node)
+        return node.value
       }
 
       set(key: K, value: V): void {
-        if (this.cache.has(key)) {
-          const idx = this.order.indexOf(key)
-          if (idx > -1) this.order.splice(idx, 1)
-        } else if (this.cache.size >= this.maxSize) {
-          const oldest = this.order.shift()
-          if (oldest !== undefined) {
-            const evicted = this.cache.get(oldest)
-            this.cache.delete(oldest)
-            if (evicted !== undefined && this.onEvict) {
-              this.onEvict(oldest, evicted)
-            }
-          }
+        const existing = this.cache.get(key)
+        if (existing) {
+          existing.value = value
+          this.touch(existing)
+          return
         }
-        this.cache.set(key, value)
-        this.order.push(key)
+        const node: LruNode<K, V> = { key, value, prev: this.tail }
+        if (this.tail) this.tail.next = node
+        this.tail = node
+        if (!this.head) this.head = node
+        this.cache.set(key, node)
+        if (this.cache.size <= this.maxSize) return
+        this.evict()
       }
 
       has(key: K): boolean {
@@ -766,14 +773,46 @@ export namespace MessageV2 {
       }
 
       delete(key: K): boolean {
-        const idx = this.order.indexOf(key)
-        if (idx > -1) this.order.splice(idx, 1)
+        const node = this.cache.get(key)
+        if (!node) return false
+        this.detach(node)
         return this.cache.delete(key)
       }
 
       clear(): void {
         this.cache.clear()
-        this.order = []
+        this.head = undefined
+        this.tail = undefined
+      }
+
+      private touch(node: LruNode<K, V>) {
+        if (this.tail === node) return
+        this.detach(node)
+        node.prev = this.tail
+        node.next = undefined
+        if (this.tail) this.tail.next = node
+        this.tail = node
+        if (!this.head) this.head = node
+      }
+
+      private detach(node: LruNode<K, V>) {
+        const prev = node.prev
+        const next = node.next
+        if (prev) prev.next = next
+        if (next) next.prev = prev
+        if (this.head === node) this.head = next
+        if (this.tail === node) this.tail = prev
+        node.prev = undefined
+        node.next = undefined
+      }
+
+      private evict() {
+        const node = this.head
+        if (!node) return
+        this.detach(node)
+        this.cache.delete(node.key)
+        if (!this.onEvict) return
+        this.onEvict(node.key, node.value)
       }
     }
 
@@ -783,16 +822,18 @@ export namespace MessageV2 {
     // Track dirty messages that need to be written
     const dirtyMessages = new Set<string>()
 
+    // Track dirty parts per message
+    const pendingParts = new Map<string, Map<string, Part | null>>()
+
     // Eviction handler - flush dirty entries before evicting
-    function handleEviction(key: string, _parts: Part[]) {
+    function handleEviction(key: string, _entry: CacheEntry) {
       if (dirtyMessages.has(key)) {
         const [sessionID, messageID] = key.split(":")
-        flushMessage(sessionID, messageID).catch((e) => {
+        flushMessage(sessionID, messageID, true).catch((e) => {
           log.error("failed to flush on eviction", { key, error: e })
         })
       }
       messageInfoCache.delete(key)
-      dirtyMessages.delete(key)
       const timer = pendingFlush.get(key)
       if (timer) {
         clearTimeout(timer)
@@ -801,7 +842,7 @@ export namespace MessageV2 {
     }
 
     // In-memory cache of parts by messageID with LRU eviction
-    const partsCache = new LRUCache<string, Part[]>(MAX_CACHE_SIZE, handleEviction)
+    const partsCache = new LRUCache<string, CacheEntry>(MAX_CACHE_SIZE, handleEviction)
 
     // Message info cache (bounded by parts cache eviction)
     const messageInfoCache = new Map<string, Info>()
@@ -815,45 +856,80 @@ export namespace MessageV2 {
       messageInfoCache.set(key, info)
     }
 
-    export async function getParts(sessionID: string, messageID: string): Promise<Part[]> {
-      const key = getCacheKey(sessionID, messageID)
+    function buildEntry(parts: Part[]): CacheEntry {
+      const list = parts.slice().sort((a, b) => (a.id > b.id ? 1 : -1))
+      const index = new Map<string, number>()
+      list.forEach((part, idx) => index.set(part.id, idx))
+      return { parts: list, index, dirtySort: false }
+    }
 
-      // Check cache first
+    function normalizeEntry(entry: CacheEntry) {
+      if (!entry.dirtySort) return
+      const list = entry.parts.slice().sort((a, b) => (a.id > b.id ? 1 : -1))
+      entry.parts = list
+      entry.index.clear()
+      list.forEach((part, idx) => entry.index.set(part.id, idx))
+      entry.dirtySort = false
+    }
+
+    async function getEntry(sessionID: string, messageID: string): Promise<CacheEntry> {
+      const key = getCacheKey(sessionID, messageID)
       const cached = partsCache.get(key)
       if (cached) return cached
-
-      // Read from storage (inline parts format)
-      const message = await Storage.read<StoredMessageWithParts>(["message", sessionID, messageID]).catch(() => null)
-      if (message?.parts) {
-        const parts = message.parts.slice().sort((a, b) => (a.id > b.id ? 1 : -1))
-        partsCache.set(key, parts)
-        messageInfoCache.set(key, message.info)
-        return parts
+      const stored = StorageSqlite.readParts(sessionID, messageID)
+      if (stored.length > 0) {
+        const entry = buildEntry(stored as Part[])
+        partsCache.set(key, entry)
+        return entry
       }
+      const message = await Storage.read<StoredMessageWithParts>(["message", sessionID, messageID]).catch(() => null)
+      if (message?.info) messageInfoCache.set(key, message.info)
+      const parts = message?.parts ?? []
+      if (parts.length > 0) {
+        StorageSqlite.writeParts(sessionID, messageID, parts as StorageSqlite.PartRecord[])
+      }
+      const entry = buildEntry(parts)
+      partsCache.set(key, entry)
+      return entry
+    }
 
-      // No parts found - return empty array and cache it
-      partsCache.set(key, [])
-      return []
+    function markPending(key: string, partID: string, value: Part | null) {
+      const pending = pendingParts.get(key)
+      if (pending) {
+        pending.set(partID, value)
+        return
+      }
+      const next = new Map<string, Part | null>()
+      next.set(partID, value)
+      pendingParts.set(key, next)
+    }
+
+    export async function getParts(sessionID: string, messageID: string): Promise<Part[]> {
+      const entry = await getEntry(sessionID, messageID)
+      normalizeEntry(entry)
+      return entry.parts
     }
 
     export async function updatePart(part: Part): Promise<void> {
       const key = getCacheKey(part.sessionID, part.messageID)
 
       // Get or initialize cache
-      let parts = partsCache.get(key)
-      if (!parts) {
-        parts = await getParts(part.sessionID, part.messageID)
-      }
+      const entry = await getEntry(part.sessionID, part.messageID)
 
       // Update part in cache
-      const idx = parts.findIndex((p) => p.id === part.id)
-      if (idx >= 0) {
-        parts[idx] = part
-      } else {
-        parts.push(part)
-        parts.sort((a, b) => (a.id > b.id ? 1 : -1))
+      const idx = entry.index.get(part.id)
+      if (idx !== undefined) {
+        entry.parts[idx] = part
+        markPending(key, part.id, part)
+        dirtyMessages.add(key)
+        scheduleFlush(part.sessionID, part.messageID)
+        return
       }
-      partsCache.set(key, parts)
+      const last = entry.parts.at(-1)
+      entry.parts.push(part)
+      entry.index.set(part.id, entry.parts.length - 1)
+      if (last && last.id > part.id) entry.dirtySort = true
+      markPending(key, part.id, part)
       dirtyMessages.add(key)
 
       // Debounce the disk write
@@ -864,19 +940,22 @@ export namespace MessageV2 {
       const key = getCacheKey(sessionID, messageID)
 
       // Get cache
-      let parts = partsCache.get(key)
-      if (!parts) {
-        parts = await getParts(sessionID, messageID)
-      }
+      const entry = await getEntry(sessionID, messageID)
 
       // Remove from cache
-      const idx = parts.findIndex((p) => p.id === partID)
-      if (idx >= 0) {
-        parts.splice(idx, 1)
-        partsCache.set(key, parts)
-        dirtyMessages.add(key)
-        scheduleFlush(sessionID, messageID)
+      const idx = entry.index.get(partID)
+      if (idx === undefined) return
+      const last = entry.parts.pop()
+      entry.index.delete(partID)
+      entry.dirtySort = true
+      if (!last) return
+      if (last.id !== partID) {
+        entry.parts[idx] = last
+        entry.index.set(last.id, idx)
       }
+      markPending(key, partID, null)
+      dirtyMessages.add(key)
+      scheduleFlush(sessionID, messageID)
     }
 
     function scheduleFlush(sessionID: string, messageID: string) {
@@ -896,35 +975,30 @@ export namespace MessageV2 {
       pendingFlush.set(key, timer)
     }
 
-    async function flushMessage(sessionID: string, messageID: string): Promise<void> {
+    async function flushMessage(sessionID: string, messageID: string, force?: boolean): Promise<void> {
       const key = getCacheKey(sessionID, messageID)
       pendingFlush.delete(key)
 
-      if (!dirtyMessages.has(key)) return
+      if (!force && !dirtyMessages.has(key)) return
       dirtyMessages.delete(key)
 
-      const parts = partsCache.get(key)
-      if (!parts) return
+      const pending = pendingParts.get(key)
+      if (!pending) return
+      pendingParts.delete(key)
 
-      // Get message info from cache or storage
-      let info: Info | undefined = messageInfoCache.get(key)
-      if (!info) {
-        const message = await Storage.read<StoredMessageWithParts>(["message", sessionID, messageID]).catch(() => null)
-        if (message?.info) {
-          info = message.info
-        }
+      const updates: StorageSqlite.PartRecord[] = []
+      const removals: string[] = []
+      for (const [id, value] of pending) {
+        if (value) updates.push(value as StorageSqlite.PartRecord)
+        if (!value) removals.push(id)
       }
 
-      if (!info) {
-        log.warn("cannot flush parts - message info not found", { sessionID, messageID })
-        return
+      if (updates.length > 0) {
+        StorageSqlite.writeParts(sessionID, messageID, updates)
       }
-
-      // Write message with inline parts
-      await Storage.write(["message", sessionID, messageID], {
-        info,
-        parts: parts.slice().sort((a, b) => (a.id > b.id ? 1 : -1)),
-      })
+      if (removals.length > 0) {
+        StorageSqlite.removeParts(sessionID, messageID, removals)
+      }
     }
 
     export async function flush(sessionID: string, messageID: string): Promise<void> {
@@ -957,6 +1031,7 @@ export namespace MessageV2 {
       partsCache.delete(key)
       messageInfoCache.delete(key)
       dirtyMessages.delete(key)
+      pendingParts.delete(key)
       const timer = pendingFlush.get(key)
       if (timer) {
         clearTimeout(timer)
@@ -968,6 +1043,7 @@ export namespace MessageV2 {
       partsCache.clear()
       messageInfoCache.clear()
       dirtyMessages.clear()
+      pendingParts.clear()
       for (const timer of pendingFlush.values()) {
         clearTimeout(timer)
       }

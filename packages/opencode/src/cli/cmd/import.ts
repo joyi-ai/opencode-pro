@@ -3,6 +3,7 @@ import { Session } from "../../session"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
 import { Storage } from "../../storage/storage"
+import { StorageSqlite } from "../../storage/sqlite"
 import { Instance } from "../../project/instance"
 import { EOL } from "os"
 
@@ -84,11 +85,9 @@ export const ImportCommand = cmd({
       await Storage.write(["session", Instance.project.id, exportData.info.id], exportData.info)
 
       for (const msg of exportData.messages) {
-        await Storage.write(["message", exportData.info.id, msg.info.id], msg.info)
-
-        for (const part of msg.parts) {
-          await Storage.write(["part", msg.info.id, part.id], part)
-        }
+        await Storage.write(["message", exportData.info.id, msg.info.id], { info: msg.info })
+        const parts = Array.isArray(msg.parts) ? (msg.parts as StorageSqlite.PartRecord[]) : []
+        StorageSqlite.writeParts(exportData.info.id, msg.info.id, parts)
       }
 
       process.stdout.write(`Imported session: ${exportData.info.id}`)

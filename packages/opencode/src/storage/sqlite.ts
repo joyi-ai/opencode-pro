@@ -19,6 +19,10 @@ export namespace StorageSqlite {
     }
   } & Record<string, unknown>
 
+  export type PartRecord = {
+    id: string
+  } & Record<string, unknown>
+
   export type MessageListInput = {
     sessionID: string
     limit?: number
@@ -52,6 +56,16 @@ export namespace StorageSqlite {
 
     CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(sessionID, id);
     CREATE INDEX IF NOT EXISTS idx_messages_session_created ON messages(sessionID, created_at);
+
+    CREATE TABLE IF NOT EXISTS message_parts (
+      sessionID TEXT NOT NULL,
+      messageID TEXT NOT NULL,
+      id TEXT NOT NULL,
+      data TEXT NOT NULL,
+      PRIMARY KEY (sessionID, messageID, id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_message_parts_message_id ON message_parts(sessionID, messageID, id);
 
     CREATE TABLE IF NOT EXISTS session_diff (
       sessionID TEXT PRIMARY KEY,
@@ -126,7 +140,7 @@ export namespace StorageSqlite {
       info.id,
       info.sessionID,
       created,
-      JSON.stringify(input),
+      JSON.stringify({ info }),
     ])
   }
 
@@ -135,6 +149,48 @@ export namespace StorageSqlite {
       .query<{ id: string }, [string]>("SELECT id FROM messages WHERE sessionID = ? ORDER BY id ASC")
       .all(sessionID)
     return rows.map((row) => row.id)
+  }
+
+  export function readParts(sessionID: string, messageID: string) {
+    const rows = db()
+      .query<{ data: string }, [string, string]>(
+        "SELECT data FROM message_parts WHERE sessionID = ? AND messageID = ? ORDER BY id ASC",
+      )
+      .all(sessionID, messageID)
+    return rows.map((row) => JSON.parse(row.data))
+  }
+
+  export function writeParts(sessionID: string, messageID: string, parts: PartRecord[]) {
+    if (parts.length === 0) return
+    const tx = db().transaction((rows: PartRecord[]) => {
+      for (const part of rows) {
+        db().run("INSERT OR REPLACE INTO message_parts (sessionID, messageID, id, data) VALUES (?, ?, ?, ?)", [
+          sessionID,
+          messageID,
+          part.id,
+          JSON.stringify(part),
+        ])
+      }
+    })
+    tx(parts)
+  }
+
+  export function removeParts(sessionID: string, messageID: string, partIDs: string[]) {
+    if (partIDs.length === 0) return
+    const tx = db().transaction((ids: string[]) => {
+      for (const id of ids) {
+        db().run("DELETE FROM message_parts WHERE sessionID = ? AND messageID = ? AND id = ?", [
+          sessionID,
+          messageID,
+          id,
+        ])
+      }
+    })
+    tx(partIDs)
+  }
+
+  export function removeMessageParts(sessionID: string, messageID: string) {
+    db().run("DELETE FROM message_parts WHERE sessionID = ? AND messageID = ?", [sessionID, messageID])
   }
 
   export function listMessagesPage(input: MessageListInput) {
@@ -172,10 +228,12 @@ export namespace StorageSqlite {
 
   export function removeMessage(sessionID: string, messageID: string) {
     db().run("DELETE FROM messages WHERE sessionID = ? AND id = ?", [sessionID, messageID])
+    removeMessageParts(sessionID, messageID)
   }
 
   export function removeMessages(sessionID: string) {
     db().run("DELETE FROM messages WHERE sessionID = ?", [sessionID])
+    db().run("DELETE FROM message_parts WHERE sessionID = ?", [sessionID])
   }
 
   export function countMessages(sessionID: string) {

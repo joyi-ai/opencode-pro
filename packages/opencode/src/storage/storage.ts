@@ -231,25 +231,25 @@ export namespace Storage {
         .catch(() => undefined)
       if (!message) continue
       if (message.info?.id && message.info?.sessionID) {
-        StorageSqlite.writeMessage(message)
+        StorageSqlite.writeMessage({ info: message.info })
+        const inlineParts = Array.isArray(message.parts) ? (message.parts as StorageSqlite.PartRecord[]) : []
+        StorageSqlite.writeParts(message.info.sessionID, message.info.id, inlineParts)
         continue
       }
       if (!message.id || !message.sessionID) continue
       const partsDir = path.join(dir, "part", message.id)
-      const parts: unknown[] = []
+      const parts: StorageSqlite.PartRecord[] = []
       if (await fs.exists(partsDir)) {
         for await (const partFile of new Bun.Glob("*.json").scan({ cwd: partsDir, absolute: true })) {
           const part = await Bun.file(partFile)
             .json()
             .catch(() => undefined)
-          if (part) parts.push(part)
+          if (part) parts.push(part as StorageSqlite.PartRecord)
         }
       }
-      parts.sort((a: any, b: any) => (a.id > b.id ? 1 : -1))
-      StorageSqlite.writeMessage({
-        info: message,
-        parts,
-      })
+      parts.sort((a, b) => (a.id > b.id ? 1 : -1))
+      StorageSqlite.writeMessage({ info: message })
+      StorageSqlite.writeParts(message.sessionID, message.id, parts)
     }
 
     for await (const diffFile of new Bun.Glob("session_diff/*.json").scan({ cwd: dir, absolute: true })) {
@@ -300,6 +300,25 @@ export namespace Storage {
 
   function isSessionDiffKey(key: string[]) {
     return key.length === 2 && key[0] === "session_diff"
+  }
+
+  function isMessageInfo(value: unknown): value is StorageSqlite.MessageRecord["info"] {
+    if (!value || typeof value !== "object") return false
+    if (!("id" in value)) return false
+    if (!("sessionID" in value)) return false
+    const id = (value as { id?: unknown }).id
+    if (typeof id !== "string") return false
+    const sessionID = (value as { sessionID?: unknown }).sessionID
+    if (typeof sessionID !== "string") return false
+    return true
+  }
+
+  function getMessageInfo(value: unknown) {
+    if (!value || typeof value !== "object") return
+    if (!("info" in value)) return
+    const info = (value as { info?: unknown }).info
+    if (!isMessageInfo(info)) return
+    return info
   }
 
   async function removeLegacy(key: string[]) {
@@ -396,7 +415,15 @@ export namespace Storage {
   export async function write<T>(key: string[], content: T) {
     await state()
     if (isMessageKey(key)) {
-      StorageSqlite.writeMessage(content as StorageSqlite.MessageRecord)
+      const info = getMessageInfo(content)
+      if (info) {
+        StorageSqlite.writeMessage({ info })
+        return
+      }
+      if (isMessageInfo(content)) {
+        StorageSqlite.writeMessage({ info: content })
+        return
+      }
       return
     }
     if (isSessionKey(key)) {

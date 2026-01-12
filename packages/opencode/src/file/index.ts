@@ -15,6 +15,7 @@ import fuzzysort from "fuzzysort"
 import { Global } from "../global"
 import { FileWatcher } from "./watcher"
 import { Flag } from "../flag/flag"
+import { FileIgnore } from "./ignore"
 
 export namespace File {
   const log = Log.create({ service: "file" })
@@ -125,35 +126,138 @@ export namespace File {
   const state = Instance.state(
     async () => {
       type Entry = { files: string[]; dirs: string[] }
-      let cache: Entry = { files: [], dirs: [] }
-      let fetching = false
+      const cache: Entry = { files: [], dirs: [] }
+      const fetching = { value: false }
       const dirty = { value: true }
       const last = { value: 0 }
       const useWatcher = Flag.OPENCODE_EXPERIMENTAL_FILEWATCHER && !Flag.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER
-      const interval = useWatcher ? 30000 : 5000
+      const interval = useWatcher ? 120000 : 5000
+
+      const fileIndex = new Map<string, number>()
+      const dirIndex = new Map<string, number>()
+      const dirCount = new Map<string, number>()
 
       const isGlobalHome = Instance.directory === Global.Path.home && Instance.project.id === "global"
       const subs: Array<() => void> = []
+
+      const resetCache = () => {
+        cache.files.length = 0
+        cache.dirs.length = 0
+        fileIndex.clear()
+        dirIndex.clear()
+        dirCount.clear()
+      }
+
+      const addDir = (dir: string) => {
+        if (dirIndex.has(dir)) return
+        cache.dirs.push(dir)
+        dirIndex.set(dir, cache.dirs.length - 1)
+      }
+
+      const removeDir = (dir: string) => {
+        const idx = dirIndex.get(dir)
+        if (idx === undefined) return
+        const last = cache.dirs.pop()
+        dirIndex.delete(dir)
+        if (!last) return
+        if (last !== dir) {
+          cache.dirs[idx] = last
+          dirIndex.set(last, idx)
+        }
+      }
+
+      const bumpDirs = (file: string, delta: number) => {
+        const parts = file.split(path.sep)
+        const count = parts.length - 1
+        if (count <= 0) return
+        const acc: string[] = []
+        for (const part of parts.slice(0, count)) {
+          acc.push(part)
+          const dir = acc.join(path.sep) + "/"
+          const current = dirCount.get(dir)
+          const base = current ?? 0
+          const next = base + delta
+          if (next <= 0) {
+            dirCount.delete(dir)
+            removeDir(dir)
+            continue
+          }
+          dirCount.set(dir, next)
+          if (current === undefined) addDir(dir)
+        }
+      }
+
+      const addFile = (file: string) => {
+        if (fileIndex.has(file)) return
+        cache.files.push(file)
+        fileIndex.set(file, cache.files.length - 1)
+        bumpDirs(file, 1)
+      }
+
+      const removeFile = (file: string) => {
+        const idx = fileIndex.get(file)
+        if (idx === undefined) return
+        const last = cache.files.pop()
+        fileIndex.delete(file)
+        if (!last) return
+        if (last !== file) {
+          cache.files[idx] = last
+          fileIndex.set(last, idx)
+        }
+        bumpDirs(file, -1)
+      }
 
       const markDirty = () => {
         dirty.value = true
       }
 
-      subs.push(
-        Bus.subscribe(FileWatcher.Event.Updated, () => {
+      const applyUpdate = async (input: { file: string; event: "add" | "change" | "unlink" }) => {
+        if (isGlobalHome) {
           markDirty()
+          return
+        }
+        const full = path.resolve(input.file)
+        if (!Filesystem.contains(Instance.directory, full)) {
+          markDirty()
+          return
+        }
+        const relative = path.relative(Instance.directory, full)
+        if (!relative || relative === ".") return
+        if (FileIgnore.match(relative)) return
+        if (input.event === "unlink") {
+          removeFile(relative)
+          return
+        }
+        if (input.event === "change" && fileIndex.has(relative)) return
+        const stat = await fs.promises.stat(full).catch(() => undefined)
+        if (!stat) return
+        if (!stat.isFile()) return
+        addFile(relative)
+      }
+
+      subs.push(
+        Bus.subscribe(FileWatcher.Event.Updated, (payload) => {
+          if (!useWatcher) {
+            markDirty()
+            return
+          }
+          void applyUpdate(payload.properties)
         }),
       )
       subs.push(
-        Bus.subscribe(Event.Edited, () => {
-          markDirty()
+        Bus.subscribe(Event.Edited, (payload) => {
+          if (!useWatcher) {
+            markDirty()
+            return
+          }
+          void applyUpdate({ file: payload.properties.file, event: "change" })
         }),
       )
 
-      const fn = async (result: Entry) => {
+      const fn = async () => {
         // Disable scanning if in root of file system
         if (Instance.directory === path.parse(Instance.directory).root) return
-        fetching = true
+        fetching.value = true
 
         if (isGlobalHome) {
           const dirs = new Set<string>()
@@ -184,45 +288,34 @@ export namespace File {
             }
           }
 
-          result.dirs = Array.from(dirs).toSorted()
-          cache = result
-          fetching = false
+          resetCache()
+          const sorted = Array.from(dirs).toSorted()
+          for (const dir of sorted) {
+            addDir(dir)
+          }
+          fetching.value = false
           dirty.value = false
           last.value = Date.now()
           return
         }
 
-        const set = new Set<string>()
+        resetCache()
         for await (const file of Ripgrep.files({ cwd: Instance.directory })) {
-          result.files.push(file)
-          let current = file
-          while (true) {
-            const dir = path.dirname(current)
-            if (dir === ".") break
-            if (dir === current) break
-            current = dir
-            if (set.has(dir)) continue
-            set.add(dir)
-            result.dirs.push(dir + "/")
-          }
+          addFile(file)
         }
-        cache = result
-        fetching = false
+        fetching.value = false
         dirty.value = false
         last.value = Date.now()
       }
-      fn(cache)
+      fn()
 
       return {
         async files() {
-          if (!fetching) {
+          if (!fetching.value) {
             const now = Date.now()
             const stale = dirty.value || now - last.value > interval
             if (stale) {
-              fn({
-                files: [],
-                dirs: [],
-              })
+              fn()
             }
           }
           return cache
@@ -246,62 +339,108 @@ export namespace File {
     const project = Instance.project
     if (project.vcs !== "git") return []
 
-    const diffOutput = await $`git diff --numstat HEAD`.cwd(Instance.directory).quiet().nothrow().text()
+    const diffOutput = await $`git diff --numstat --no-renames HEAD`.cwd(Instance.directory).quiet().nothrow().text()
+    const diffLines = diffOutput.trim().split("\n").filter(Boolean)
+    const stats = new Map<string, { added: number; removed: number }>()
 
+    const parseNum = (value: string | undefined) => {
+      if (!value || value === "-") return 0
+      const parsed = Number.parseInt(value, 10)
+      if (!Number.isFinite(parsed)) return 0
+      return parsed
+    }
+
+    for (const line of diffLines) {
+      const parts = line.split("\t")
+      const filepath = parts[2]
+      if (!filepath) continue
+      stats.set(filepath, {
+        added: parseNum(parts[0]),
+        removed: parseNum(parts[1]),
+      })
+    }
+
+    const statusOutput = await $`git status --porcelain=v2 -z`.cwd(Instance.directory).quiet().nothrow().text()
+    const entries = statusOutput.split("\0").filter(Boolean)
     const changedFiles: Info[] = []
 
-    if (diffOutput.trim()) {
-      const lines = diffOutput.trim().split("\n")
-      for (const line of lines) {
-        const [added, removed, filepath] = line.split("\t")
+    const parsePath = (entry: string, start: number) => {
+      const parts = entry.split(" ")
+      if (parts.length <= start) return ""
+      return parts.slice(start).join(" ")
+    }
+
+    const statusType = (value: string) => {
+      if (value.includes("D")) return "deleted" as const
+      if (value.includes("A")) return "added" as const
+      return "modified" as const
+    }
+
+    const countLines = async (relative: string) => {
+      const full = path.join(Instance.directory, relative)
+      const file = Bun.file(full)
+      const size = file.size
+      if (!Number.isFinite(size)) return 0
+      if (size > 256 * 1024) return 0
+      const content = await file.text().catch(() => "")
+      if (!content) return 0
+      return content.split("\n").length
+    }
+
+    for (const entry of entries) {
+      if (entry.startsWith("? ")) {
+        const filepath = entry.slice(2)
+        const lines = await countLines(filepath)
         changedFiles.push({
           path: filepath,
-          added: added === "-" ? 0 : parseInt(added, 10),
-          removed: removed === "-" ? 0 : parseInt(removed, 10),
-          status: "modified",
+          added: lines,
+          removed: 0,
+          status: "added",
         })
+        continue
       }
-    }
 
-    const untrackedOutput = await $`git ls-files --others --exclude-standard`
-      .cwd(Instance.directory)
-      .quiet()
-      .nothrow()
-      .text()
-
-    if (untrackedOutput.trim()) {
-      const untrackedFiles = untrackedOutput.trim().split("\n")
-      for (const filepath of untrackedFiles) {
-        try {
-          const content = await Bun.file(path.join(Instance.directory, filepath)).text()
-          const lines = content.split("\n").length
-          changedFiles.push({
-            path: filepath,
-            added: lines,
-            removed: 0,
-            status: "added",
-          })
-        } catch {
-          continue
-        }
-      }
-    }
-
-    // Get deleted files
-    const deletedOutput = await $`git diff --name-only --diff-filter=D HEAD`
-      .cwd(Instance.directory)
-      .quiet()
-      .nothrow()
-      .text()
-
-    if (deletedOutput.trim()) {
-      const deletedFiles = deletedOutput.trim().split("\n")
-      for (const filepath of deletedFiles) {
+      if (entry.startsWith("1 ")) {
+        const parts = entry.split(" ")
+        const code = parts[1] ?? ""
+        const filepath = parsePath(entry, 8)
+        if (!filepath) continue
+        const stat = stats.get(filepath)
         changedFiles.push({
           path: filepath,
-          added: 0,
-          removed: 0, // Could get original line count but would require another git command
-          status: "deleted",
+          added: stat?.added ?? 0,
+          removed: stat?.removed ?? 0,
+          status: statusType(code),
+        })
+        continue
+      }
+
+      if (entry.startsWith("2 ")) {
+        const parts = entry.split(" ")
+        const code = parts[1] ?? ""
+        const filepath = parsePath(entry, 9)
+        if (!filepath) continue
+        const stat = stats.get(filepath)
+        changedFiles.push({
+          path: filepath,
+          added: stat?.added ?? 0,
+          removed: stat?.removed ?? 0,
+          status: statusType(code),
+        })
+        continue
+      }
+
+      if (entry.startsWith("u ")) {
+        const parts = entry.split(" ")
+        const code = parts[1] ?? ""
+        const filepath = parsePath(entry, 10)
+        if (!filepath) continue
+        const stat = stats.get(filepath)
+        changedFiles.push({
+          path: filepath,
+          added: stat?.added ?? 0,
+          removed: stat?.removed ?? 0,
+          status: statusType(code),
         })
       }
     }
