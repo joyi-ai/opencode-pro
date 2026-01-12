@@ -478,7 +478,6 @@ export function SessionTurn(
   const diffBatch = 20
 
   const [store, setStore] = createStore({
-    stickyTitleRef: undefined as HTMLDivElement | undefined,
     stickyTriggerRef: undefined as HTMLDivElement | undefined,
     stickyHeaderHeight: 0,
     retrySeconds: 0,
@@ -515,18 +514,9 @@ export function SessionTurn(
   })
 
   createResizeObserver(
-    () => store.stickyTitleRef,
-    ({ height }) => {
-      const triggerHeight = store.stickyTriggerRef?.offsetHeight ?? 0
-      setStore("stickyHeaderHeight", height + triggerHeight + 8)
-    },
-  )
-
-  createResizeObserver(
     () => store.stickyTriggerRef,
     ({ height }) => {
-      const titleHeight = store.stickyTitleRef?.offsetHeight ?? 0
-      setStore("stickyHeaderHeight", titleHeight + height + 8)
+      setStore("stickyHeaderHeight", height + 8)
     },
   )
 
@@ -592,9 +582,9 @@ export function SessionTurn(
                     <Part part={shellModePart()!} message={msg()} defaultOpen />
                   </Match>
                   <Match when={true}>
-                    {/* Title (sticky) - hidden when hideTitle prop is true */}
+                    {/* Title - hidden when hideTitle prop is true */}
                     <Show when={!props.hideTitle}>
-                      <div ref={(el) => setStore("stickyTitleRef", el)} data-slot="session-turn-sticky-title">
+                      <div data-slot="session-turn-sticky-title">
                         <div data-slot="session-turn-message-header">
                           <div data-slot="session-turn-message-title">
                             <Switch>

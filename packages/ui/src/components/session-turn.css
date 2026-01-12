@@ -32,9 +32,7 @@
 
   [data-slot="session-turn-sticky-title"] {
     width: 100%;
-    position: sticky;
-    top: 0;
-    z-index: 21;
+    position: static;
   }
 
   [data-slot="session-turn-response-trigger"] {
