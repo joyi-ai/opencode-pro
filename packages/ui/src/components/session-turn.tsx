@@ -356,8 +356,6 @@ export function SessionTurn(
   const responsePartId = createMemo(() => lastTextPart()?.id)
 
   const reasoning = createMemo(() => {
-    if (stepsToolParts().length === 0) return
-
     const texts: string[] = []
     for (const msg of assistantMessages()) {
       const msgParts = data.store.part[msg.id] ?? emptyParts
