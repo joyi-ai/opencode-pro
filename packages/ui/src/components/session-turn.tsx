@@ -141,6 +141,7 @@ function StepsContainer(props: {
 
 type SessionMessageActions = {
   onEdit?: (message: MessageType) => void
+  onRestore?: (message: MessageType) => void
   onRetry?: (message: MessageType) => void
   onDelete?: (message: MessageType) => void
 }
@@ -238,11 +239,13 @@ export function SessionTurn(
     const actions = props.actions
     if (!msg || !actions) return undefined
     const onEdit = actions.onEdit
+    const onRestore = actions.onRestore
     const onRetry = actions.onRetry
     const onDelete = actions.onDelete
-    if (!onEdit && !onRetry && !onDelete) return undefined
+    if (!onEdit && !onRestore && !onRetry && !onDelete) return undefined
     return {
       onEdit: onEdit ? () => onEdit(msg) : undefined,
+      onRestore: onRestore ? () => onRestore(msg) : undefined,
       onRetry: onRetry ? () => onRetry(msg) : undefined,
       onDelete: onDelete ? () => onDelete(msg) : undefined,
     }
@@ -822,6 +825,7 @@ export function SessionTurn(
                         <div data-component="message-actions-row">
                           <MessageActions
                             onEdit={messageActions()?.onEdit}
+                            onRestore={messageActions()?.onRestore}
                             onRetry={messageActions()?.onRetry}
                             onDelete={messageActions()?.onDelete}
                           />

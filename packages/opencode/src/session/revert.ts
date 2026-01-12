@@ -7,6 +7,7 @@ import { Log } from "../util/log"
 import { splitWhen } from "remeda"
 import { Bus } from "../bus"
 import { SessionPrompt } from "./prompt"
+import { Instance } from "../project/instance"
 
 export namespace SessionRevert {
   const log = Log.create({ service: "session.revert" })
@@ -19,60 +20,72 @@ export namespace SessionRevert {
   export type RevertInput = z.infer<typeof RevertInput>
 
   export async function revert(input: RevertInput) {
-    SessionPrompt.assertNotBusy(input.sessionID)
-    const all = await Session.messages({ sessionID: input.sessionID })
-    let lastUser: MessageV2.User | undefined
-    const session = await Session.get(input.sessionID)
+    const existing = await Session.get(input.sessionID)
+    return Instance.provide({
+      directory: existing.directory,
+      fn: async () => {
+        SessionPrompt.assertNotBusy(input.sessionID)
+        const all = await Session.messages({ sessionID: input.sessionID })
+        let lastUser: MessageV2.User | undefined
+        const session = await Session.get(input.sessionID)
 
-    let revert: Session.Info["revert"]
-    const patches: Snapshot.Patch[] = []
-    for (const msg of all) {
-      if (msg.info.role === "user") lastUser = msg.info
-      const remaining = []
-      for (const part of msg.parts) {
-        if (revert) {
-          if (part.type === "patch") {
-            patches.push(part)
-          }
-          continue
-        }
+        let revert: Session.Info["revert"]
+        const patches: Snapshot.Patch[] = []
+        for (const msg of all) {
+          if (msg.info.role === "user") lastUser = msg.info
+          const remaining = []
+          for (const part of msg.parts) {
+            if (revert) {
+              if (part.type === "patch") {
+                patches.push(part)
+              }
+              continue
+            }
 
-        if (!revert) {
-          if ((msg.info.id === input.messageID && !input.partID) || part.id === input.partID) {
-            // if no useful parts left in message, same as reverting whole message
-            const partID = remaining.some((item) => ["text", "tool"].includes(item.type)) ? input.partID : undefined
-            revert = {
-              messageID: !partID && lastUser ? lastUser.id : msg.info.id,
-              partID,
+            if (!revert) {
+              if ((msg.info.id === input.messageID && !input.partID) || part.id === input.partID) {
+                // if no useful parts left in message, same as reverting whole message
+                const partID = remaining.some((item) => ["text", "tool"].includes(item.type)) ? input.partID : undefined
+                revert = {
+                  messageID: !partID && lastUser ? lastUser.id : msg.info.id,
+                  partID,
+                }
+              }
+              remaining.push(part)
             }
           }
-          remaining.push(part)
         }
-      }
-    }
 
-    if (revert) {
-      const session = await Session.get(input.sessionID)
-      revert.snapshot = session.revert?.snapshot ?? (await Snapshot.track())
-      await Snapshot.revert(patches)
-      if (revert.snapshot) revert.diff = await Snapshot.diff(revert.snapshot)
-      return Session.update(input.sessionID, (draft) => {
-        draft.revert = revert
-      })
-    }
-    return session
+        if (revert) {
+          const session = await Session.get(input.sessionID)
+          revert.snapshot = session.revert?.snapshot ?? (await Snapshot.track())
+          await Snapshot.revert(patches)
+          if (revert.snapshot) revert.diff = await Snapshot.diff(revert.snapshot)
+          return Session.update(input.sessionID, (draft) => {
+            draft.revert = revert
+          })
+        }
+        return session
+      },
+    })
   }
 
   export async function unrevert(input: { sessionID: string }) {
     log.info("unreverting", input)
-    SessionPrompt.assertNotBusy(input.sessionID)
-    const session = await Session.get(input.sessionID)
-    if (!session.revert) return session
-    if (session.revert.snapshot) await Snapshot.restore(session.revert.snapshot)
-    const next = await Session.update(input.sessionID, (draft) => {
-      draft.revert = undefined
+    const existing = await Session.get(input.sessionID)
+    return Instance.provide({
+      directory: existing.directory,
+      fn: async () => {
+        SessionPrompt.assertNotBusy(input.sessionID)
+        const session = await Session.get(input.sessionID)
+        if (!session.revert) return session
+        if (session.revert.snapshot) await Snapshot.restore(session.revert.snapshot)
+        const next = await Session.update(input.sessionID, (draft) => {
+          draft.revert = undefined
+        })
+        return next
+      },
     })
-    return next
   }
 
   export async function cleanup(session: Session.Info) {

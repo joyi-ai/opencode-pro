@@ -521,6 +521,7 @@ export function SessionPane(props: SessionPaneProps) {
                   onUserInteracted={() => setStore("userInteracted", true)}
                   actions={{
                     onEdit: messageActions.editMessage,
+                    onRestore: messageActions.restoreCheckpoint,
                     onRetry: messageActions.retryMessage,
                     onDelete: messageActions.deleteMessage,
                   }}
@@ -657,6 +658,7 @@ export function SessionPane(props: SessionPaneProps) {
           onUserInteracted={() => setStore("userInteracted", true)}
           messageActions={{
             onEdit: messageActions.editMessage,
+            onRestore: messageActions.restoreCheckpoint,
             onRetry: messageActions.retryMessage,
             onDelete: messageActions.deleteMessage,
           }}

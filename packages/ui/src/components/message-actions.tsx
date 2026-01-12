@@ -3,16 +3,18 @@ import { IconButton } from "./icon-button"
 
 export type MessageActionHandlers = {
   onEdit?: () => void
+  onRestore?: () => void
   onRetry?: () => void
   onDelete?: () => void
 }
 
 export function MessageActions(props: ComponentProps<"div"> & MessageActionHandlers) {
-  const [local, others] = splitProps(props, ["onEdit", "onRetry", "onDelete", "class", "classList"])
+  const [local, others] = splitProps(props, ["onEdit", "onRestore", "onRetry", "onDelete", "class", "classList"])
   const hasEdit = () => !!local.onEdit
+  const hasRestore = () => !!local.onRestore
   const hasRetry = () => !!local.onRetry
   const hasDelete = () => !!local.onDelete
-  const hasActions = () => hasEdit() || hasRetry() || hasDelete()
+  const hasActions = () => hasEdit() || hasRestore() || hasRetry() || hasDelete()
   const [confirmDelete, setConfirmDelete] = createSignal(false)
   let confirmTimeout: ReturnType<typeof setTimeout> | undefined
 
@@ -60,6 +62,15 @@ export function MessageActions(props: ComponentProps<"div"> & MessageActionHandl
             aria-label="Edit message"
             title="Edit"
             onClick={() => local.onEdit?.()}
+          />
+        </Show>
+        <Show when={hasRestore()}>
+          <IconButton
+            variant="ghost"
+            icon="arrow-left"
+            aria-label="Restore checkpoint"
+            title="Restore"
+            onClick={() => local.onRestore?.()}
           />
         </Show>
         <Show when={hasRetry()}>

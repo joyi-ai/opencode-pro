@@ -18,6 +18,7 @@ export interface MobileViewProps {
   onUserInteracted?: () => void
   messageActions?: {
     onEdit?: (message: Message) => void
+    onRestore?: (message: Message) => void
     onRetry?: (message: Message) => void
     onDelete?: (message: Message) => void
   }

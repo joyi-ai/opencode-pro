@@ -173,6 +173,41 @@ export function useMessageActions() {
       })
   }
 
+  const restoreCheckpoint = async (message: Message) => {
+    if (!isUserMessage(message)) return
+    await abortIfBusy(message.sessionID)
+
+    const all = sync.data.message[message.sessionID] ?? []
+    const index = all.findIndex((m) => m.id === message.id)
+    const next = index >= 0 ? all[index + 1] : undefined
+
+    if (!next) {
+      showToast({
+        title: "Already at latest checkpoint",
+        description: "There are no newer messages to undo in this session.",
+      })
+      return
+    }
+
+    const reverted = await sdk.client.session
+      .revert({ sessionID: message.sessionID, messageID: message.id })
+      .then(() => true)
+      .catch((e) => {
+        showToast({
+          variant: "error",
+          title: "Failed to restore checkpoint",
+          description: e.message ?? "Please try again.",
+        })
+        return false
+      })
+    if (!reverted) return
+
+    showToast({
+      title: "Checkpoint restored",
+      description: "Agent changes from newer messages were undone.",
+    })
+  }
+
   const deleteMessage = async (message: Message) => {
     if (!isUserMessage(message)) return
     await abortIfBusy(message.sessionID)
@@ -200,6 +235,7 @@ export function useMessageActions() {
 
   return {
     editMessage,
+    restoreCheckpoint,
     retryMessage,
     deleteMessage,
   }
