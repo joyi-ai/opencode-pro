@@ -6,12 +6,10 @@ import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { showToast } from "@opencode-ai/ui/toast"
 import { useMultiPane } from "@/context/multi-pane"
 import { useLayout } from "@/context/layout"
-import { useNavigate } from "@solidjs/router"
 
 export function PaneToolbar() {
   const multiPane = useMultiPane()
   const layout = useLayout()
-  const navigate = useNavigate()
 
   const currentPage = createMemo(() => multiPane.currentPage() + 1)
   const totalPages = createMemo(() => multiPane.totalPages())
@@ -37,16 +35,9 @@ export function PaneToolbar() {
     }
   }
 
-  function handleBackToSingle() {
-    navigate("/")
-  }
-
   return (
     <div class="h-8 shrink-0 bg-background-base border-b border-border-weak-base flex items-center justify-between px-2 gap-2">
       <div class="flex items-center gap-2">
-        <Tooltip value="Back to single view">
-          <IconButton icon="arrow-left" variant="ghost" onClick={handleBackToSingle} />
-        </Tooltip>
         <div class="text-13-medium text-text-strong">Multi-Session</div>
       </div>
 

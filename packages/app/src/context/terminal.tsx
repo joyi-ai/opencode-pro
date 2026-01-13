@@ -41,7 +41,7 @@ function createTerminalContext(paneId?: string | Accessor<string | undefined>) {
   const getPaneId = typeof paneId === "function" ? paneId : () => paneId
 
   // For pane-based terminals, don't persist (paneIds are random and would cause orphaned entries)
-  // For single session view, persist by directory/session
+  // For non-pane terminals, persist by directory/session
   const [paneStore, setPaneStore] = createStore<TerminalStore>({
     entries: {},
   })

@@ -26,6 +26,11 @@ import { PaneHome } from "@/components/multi-pane/pane-home"
 import { getPaneProjectLabel, getPaneState, getPaneTitle } from "@/utils/pane"
 import { useCommand } from "@/context/command"
 
+type MultiPanePageProps = {
+  initialDir?: string
+  initialSession?: string
+}
+
 // Provider wrapper for each pane (provides Local/Terminal context needed by SessionPane)
 function PaneSyncedProviders(props: { paneId: string; directory: string; children: any }) {
   const sync = useSync()
@@ -222,7 +227,7 @@ function GlobalReviewWrapper() {
   )
 }
 
-function MultiPaneContent() {
+function MultiPaneContent(props: MultiPanePageProps) {
   const multiPane = useMultiPane()
   const layout = useLayout()
   const globalSync = useGlobalSync()
@@ -392,59 +397,83 @@ function MultiPaneContent() {
     const rawDir = searchParams.dir
     const rawSession = searchParams.session
     const rawNewTab = searchParams.newTab
-    const dirFromUrl = typeof rawDir === "string" ? decodeURIComponent(rawDir) : undefined
-    const sessionFromUrl = typeof rawSession === "string" ? rawSession : undefined
+    const hasDirParam = typeof rawDir === "string"
+    const hasSessionParam = typeof rawSession === "string"
+    const dirFromUrl = hasDirParam ? decodeURIComponent(rawDir) : undefined
+    const sessionFromUrl = hasSessionParam ? rawSession : undefined
     const wantsNewTab = rawNewTab === "true"
+    const initialDir = dirFromUrl ?? props.initialDir
+    const initialSession = sessionFromUrl ?? props.initialSession
+    const shouldClearParams = hasDirParam || hasSessionParam || wantsNewTab
 
     if (multiPane.panes().length === 0) {
-      if (dirFromUrl) {
-        layout.projects.open(dirFromUrl)
+      if (initialDir) {
+        layout.projects.open(initialDir)
         // Add pane with session (if any) and a new tab with same/last project
-        multiPane.addPane(dirFromUrl, sessionFromUrl)
+        multiPane.addPane(initialDir, initialSession)
         if (wantsNewTab) {
-          multiPane.addPane(dirFromUrl)
+          multiPane.addPane(initialDir)
         }
-        setSearchParams({ dir: undefined, session: undefined, newTab: undefined })
-      } else {
-        const lastProject = getLastProject()
-        if (wantsNewTab) {
-          multiPane.addPane(lastProject)
-          multiPane.addPane(lastProject)
-          setSearchParams({ newTab: undefined })
-        } else {
-          // No URL params, use most recent project
-          multiPane.addPane(lastProject)
+        if (shouldClearParams) {
+          setSearchParams({ dir: undefined, session: undefined, newTab: undefined })
         }
+        return
       }
-    } else if (dirFromUrl && wantsNewTab) {
-      // Already have panes, but coming from single session "New Tab" button
-      layout.projects.open(dirFromUrl)
-      multiPane.addPane(dirFromUrl, sessionFromUrl)
-      multiPane.addPane(dirFromUrl)
+      const lastProject = getLastProject()
+      if (wantsNewTab) {
+        multiPane.addPane(lastProject)
+        multiPane.addPane(lastProject)
+        setSearchParams({ newTab: undefined })
+        return
+      }
+      // No URL params, use most recent project
+      multiPane.addPane(lastProject)
+      return
+    }
+
+    if (!initialDir) return
+    if (!wantsNewTab) return
+    // Already have panes, but coming from session "New Tab" button
+    layout.projects.open(initialDir)
+    multiPane.addPane(initialDir, initialSession)
+    multiPane.addPane(initialDir)
+    if (shouldClearParams) {
       setSearchParams({ dir: undefined, session: undefined, newTab: undefined })
     }
   })
 
   createEffect(
     on(
-      () => ({ session: searchParams.session, dir: searchParams.dir, newTab: searchParams.newTab }),
+      () => {
+        const rawDir = searchParams.dir
+        const rawSession = searchParams.session
+        const hasDirParam = typeof rawDir === "string"
+        const hasSessionParam = typeof rawSession === "string"
+        const dirFromUrl = hasDirParam ? decodeURIComponent(rawDir) : undefined
+        const sessionFromUrl = hasSessionParam ? rawSession : undefined
+        return {
+          dir: dirFromUrl ?? props.initialDir,
+          session: sessionFromUrl ?? props.initialSession,
+          newTab: searchParams.newTab,
+          hasQueryParams: hasDirParam || hasSessionParam,
+        }
+      },
       (params) => {
         // Skip if newTab param is present (handled by onMount)
         if (params.newTab === "true") return
         // Only handle if we already have panes (not initial load)
         if (multiPane.panes().length === 0) return
 
-        if (typeof params.dir === "string") {
-          const directory = decodeURIComponent(params.dir)
-          const sessionId = typeof params.session === "string" ? params.session : undefined
-          const focusedPane = multiPane.focusedPane()
-          if (focusedPane) {
-            layout.projects.open(directory)
-            multiPane.updatePane(focusedPane.id, { directory, sessionId })
-            multiPane.setFocused(focusedPane.id)
-          }
-          setSearchParams({ session: undefined, dir: undefined })
+        if (!params.dir) return
+        const sessionId = params.session
+        const focusedPane = multiPane.focusedPane()
+        if (focusedPane) {
+          layout.projects.open(params.dir)
+          multiPane.updatePane(focusedPane.id, { directory: params.dir, sessionId })
+          multiPane.setFocused(focusedPane.id)
         }
+        if (!params.hasQueryParams) return
+        setSearchParams({ session: undefined, dir: undefined })
       },
     ),
   )
@@ -520,7 +549,6 @@ function MultiPaneContent() {
                               <SyncProvider>
                                 <PaneSyncedProviders paneId={pane.id} directory={pane.directory!}>
                                   <SessionPane
-                                    mode="multi"
                                     paneId={pane.id}
                                     directory={pane.directory!}
                                     sessionId={pane.sessionId!}
@@ -570,10 +598,10 @@ function MultiPaneContent() {
   )
 }
 
-export default function MultiPanePage() {
+export default function MultiPanePage(props: MultiPanePageProps) {
   return (
     <MultiPaneProvider>
-      <MultiPaneContent />
+      <MultiPaneContent initialDir={props.initialDir} initialSession={props.initialSession} />
     </MultiPaneProvider>
   )
 }

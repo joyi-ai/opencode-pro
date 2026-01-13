@@ -14,7 +14,7 @@ import {
   type JSX,
 } from "solid-js"
 import { DateTime } from "luxon"
-import { A, useLocation, useNavigate, useParams, useSearchParams } from "@solidjs/router"
+import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router"
 import { useLayout, getAvatarColors, LocalProject } from "@/context/layout"
 import { useGlobalSync } from "@/context/global-sync"
 import { base64Decode, base64Encode } from "@opencode-ai/util/encode"
@@ -98,7 +98,6 @@ export default function Layout(props: ParentProps) {
   const notification = useNotification()
   const permission = usePermission()
   const navigate = useNavigate()
-  const location = useLocation()
   const providers = useProviders()
   const dialog = useDialog()
   const command = useCommand()
@@ -199,9 +198,7 @@ export default function Layout(props: ParentProps) {
       const sessionTitle = session?.title ?? "New session"
       const projectName = getFilename(directory)
       const description = `${sessionTitle} in ${projectName} needs permission`
-      const href = isMultiRoute()
-        ? `${multiBase()}?session=${perm.sessionID}&dir=${encodeURIComponent(directory)}`
-        : `/${base64Encode(directory)}/session/${perm.sessionID}`
+      const href = `/${base64Encode(directory)}/session/${perm.sessionID}`
 
       const now = Date.now()
       const lastAlerted = alertedAtBySession.get(sessionKey) ?? 0
@@ -279,11 +276,6 @@ export default function Layout(props: ParentProps) {
     return normalizeDirectory(a) === normalizeDirectory(b)
   }
 
-  function multiBase() {
-    if (location.pathname === "/") return "/"
-    return "/multi"
-  }
-
   function projectDirectories(project: LocalProject) {
     const sandboxes = project.sandboxes ?? []
     return [project.worktree, ...sandboxes].filter(Boolean)
@@ -296,11 +288,6 @@ export default function Layout(props: ParentProps) {
     const root = allowed[0]
     if (root) return root
     return globalSync.data.path.directory
-  }
-
-  function isMultiRoute() {
-    if (params.dir) return false
-    return true
   }
 
   function sortSessions(a: Session, b: Session) {
@@ -855,28 +842,14 @@ export default function Layout(props: ParentProps) {
   function navigateToProject(directory: string | undefined) {
     if (!directory) return
     const lastSession = store.lastSession[directory]
-    if (isMultiRoute()) {
-      const dir = encodeURIComponent(directory)
-      const sessionParam = lastSession ? `&session=${lastSession}` : ""
-      navigate(`${multiBase()}?dir=${dir}${sessionParam}`)
-      layout.mobileSidebar.hide()
-      return
-    }
-    navigate(`/${base64Encode(directory)}${lastSession ? `/session/${lastSession}` : ""}`)
+    const slug = base64Encode(directory)
+    const href = lastSession ? `/${slug}/session/${lastSession}` : `/${slug}/session`
+    navigate(href)
     layout.mobileSidebar.hide()
   }
 
   function navigateToSession(session: Session | undefined) {
     if (!session) return
-    if (isMultiRoute()) {
-      const currentDir = params.dir ? base64Decode(params.dir) : undefined
-      const targetDir = session.directory || currentDir
-      if (!targetDir) return
-      const dir = encodeURIComponent(targetDir)
-      navigate(`${multiBase()}?session=${session.id}&dir=${dir}`)
-      layout.mobileSidebar.hide()
-      return
-    }
     const sessionDir = session.directory ?? (params.dir ? base64Decode(params.dir) : undefined)
     if (!sessionDir) return
     navigate(`/${base64Encode(sessionDir)}/session/${session.id}`)
@@ -1101,12 +1074,7 @@ export default function Layout(props: ParentProps) {
       if (!sameDirectory(currentDir, sessionDirectory())) return false
       return true
     })
-    const sessionHref = createMemo(() => {
-      if (isMultiRoute()) {
-        return `${multiBase()}?session=${props.session.id}&dir=${encodeURIComponent(sessionDirectory())}`
-      }
-      return `/${base64Encode(sessionDirectory())}/session/${props.session.id}`
-    })
+    const sessionHref = createMemo(() => `/${base64Encode(sessionDirectory())}/session/${props.session.id}`)
     const previewKey = createMemo(() => previewKeyFor(sessionDirectory(), props.session.id))
     const previewState = createMemo(() => preview.session[previewKey()])
     const previewLines = createMemo(() => {
@@ -1240,7 +1208,7 @@ export default function Layout(props: ParentProps) {
     const sortable = createSortable(props.project.worktree)
     const showExpanded = createMemo(() => props.mobile || layout.sidebar.opened())
     const slug = createMemo(() => base64Encode(props.project.worktree))
-    const newSessionHref = createMemo(() => `${multiBase()}?dir=${encodeURIComponent(props.project.worktree)}`)
+    const newSessionHref = createMemo(() => `/${base64Encode(props.project.worktree)}/session`)
     const name = createMemo(() => props.project.name || truncateDirectoryPrefix(props.project.worktree))
     const [store, setProjectStore] = globalSync.child(props.project.worktree)
     const sessions = createMemo(() => store.session.toSorted(sortSessions))

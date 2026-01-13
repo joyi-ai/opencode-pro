@@ -1,6 +1,6 @@
 import "@/index.css"
 import { ErrorBoundary, Show, lazy, type ParentProps } from "solid-js"
-import { Router, Route, Navigate, useParams } from "@solidjs/router"
+import { Router, Route, Navigate } from "@solidjs/router"
 import { MetaProvider } from "@solidjs/meta"
 import { Font } from "@opencode-ai/ui/font"
 import { MarkedProvider } from "@opencode-ai/ui/context/marked"
@@ -25,11 +25,10 @@ import { ErrorPage } from "./pages/error"
 import { iife } from "@opencode-ai/util/iife"
 import { Suspense } from "solid-js"
 import { OnboardingProvider, Onboarding } from "@/components/onboarding"
-import { base64Decode } from "@opencode-ai/util/encode"
 
 const Home = lazy(() => import("@/pages/home"))
 const Marketplace = lazy(() => import("@/pages/marketplace"))
-const MultiPanePage = lazy(() => import("@/pages/multi-pane"))
+const Session = lazy(() => import("@/pages/session"))
 const Loading = () => <div class="size-full flex items-center justify-center text-text-weak">Loading...</div>
 
 export { PlatformProvider, type Platform } from "@/context/platform"
@@ -95,13 +94,6 @@ function ServerKey(props: ParentProps) {
 }
 
 export function AppInterface() {
-  const SessionRedirect = () => {
-    const params = useParams()
-    const directory = params.dir ? base64Decode(params.dir) : ""
-    const query = directory ? `?dir=${encodeURIComponent(directory)}${params.id ? `&session=${params.id}` : ""}` : ""
-    return <Navigate href={`/multi${query}`} />
-  }
-
   return (
     <ServerProvider defaultUrl={defaultServerUrl}>
       <ServerKey>
@@ -143,19 +135,15 @@ export function AppInterface() {
                   </Suspense>
                 )}
               />
-              <Route
-                path="/multi"
-                component={() => (
-                  <Suspense fallback={<Loading />}>
-                    <MultiPanePage />
-                  </Suspense>
-                )}
-              />
               <Route path="/:dir" component={DirectoryLayout}>
                 <Route path="/" component={() => <Navigate href="session" />} />
                 <Route
                   path="/session/:id?"
-                  component={() => <SessionRedirect />}
+                  component={() => (
+                    <Suspense fallback={<Loading />}>
+                      <Session />
+                    </Suspense>
+                  )}
                 />
               </Route>
             </Router>

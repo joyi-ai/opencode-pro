@@ -1,6 +1,5 @@
-import { For, Show, createMemo, createEffect, on, onMount, onCleanup, createSignal, untrack, type Accessor } from "solid-js"
-import { createStore, produce } from "solid-js/store"
-import { useParams, useNavigate } from "@solidjs/router"
+import { For, Show, createMemo, createEffect, on, onCleanup, type Accessor } from "solid-js"
+import { createStore } from "solid-js/store"
 import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { SessionTurn } from "@opencode-ai/ui/session-turn"
 import { SessionTodoFooter } from "@opencode-ai/ui/session-todo-footer"
@@ -11,10 +10,8 @@ import { DateTime } from "luxon"
 import { createDraggable, createDroppable } from "@thisbeyond/solid-dnd"
 import { useSync } from "@/context/sync"
 import { useSDK } from "@/context/sdk"
-import { useLocal } from "@/context/local"
 import { useLayout } from "@/context/layout"
 import { useMultiPane } from "@/context/multi-pane"
-import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { useHeaderOverlay } from "@/hooks/use-header-overlay"
 import { useSessionMessages } from "@/hooks/use-session-messages"
 import { useSessionSync } from "@/hooks/use-session-sync"
@@ -23,18 +20,12 @@ import { useMessageActions } from "@/hooks/use-message-actions"
 import { ThemeDropup } from "@/components/theme-dropup"
 import { SessionPaneHeader } from "./header"
 import { ReviewPanel } from "./review-panel"
-import { ContextTab } from "./context-tab"
 import { MobileView } from "./mobile-view"
-import { base64Decode } from "@opencode-ai/util/encode"
 import { getDirectory, getFilename } from "@opencode-ai/util/path"
 import { useNotification } from "@/context/notification"
-import { Persist, persisted } from "@/utils/persist"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 
-export type SessionPaneMode = "single" | "multi"
-
 export interface SessionPaneProps {
-  mode: SessionPaneMode
   paneId?: string
   directory: string
   sessionId?: string
@@ -42,39 +33,17 @@ export interface SessionPaneProps {
   onSessionChange?: (sessionId: string | undefined) => void
   onDirectoryChange?: (directory: string) => void
   onClose?: () => void
-  promptInputRef?: Accessor<HTMLDivElement | undefined>
   reviewMode?: "pane" | "global"
 }
 
-type SessionSetup = {
-  agent?: string
-  model?: { providerID: string; modelID: string }
-  variant?: string
-  modeId?: string
-  thinking?: boolean
-}
-
-type SessionSetupStore = {
-  entries: Record<string, SessionSetup>
-  used: Record<string, number>
-}
-
-const MAX_SESSION_SETUP = 50
-
 export function SessionPane(props: SessionPaneProps) {
-  const params = useParams()
-  const navigate = useNavigate()
   const sync = useSync()
   const sdk = useSDK()
-  const local = useLocal()
   const layout = useLayout()
-  const dialog = useDialog()
-  const multiPane = props.mode === "multi" ? useMultiPane() : undefined
+  const multiPane = useMultiPane()
   const notification = useNotification()
   const messageActions = useMessageActions()
-  const hasMultiplePanes = createMemo(() =>
-    props.mode === "multi" && multiPane ? multiPane.panes().length > 1 : false,
-  )
+  const hasMultiplePanes = createMemo(() => multiPane.panes().length > 1)
 
   // Local state
   const [store, setStore] = createStore({
@@ -89,20 +58,15 @@ export function SessionPane(props: SessionPaneProps) {
     pendingTopScrollFrame: undefined as number | undefined,
   })
 
-  // Session ID (from props in multi mode, from params in single mode)
-  const sessionId = createMemo(() => (props.mode === "single" ? params.id : props.sessionId))
+  const sessionId = createMemo(() => props.sessionId)
 
   // Directory matching
-  const expectedDirectory = createMemo(() =>
-    props.mode === "single" ? (params.dir ? base64Decode(params.dir) : "") : props.directory,
-  )
+  const expectedDirectory = createMemo(() => props.directory)
   const sdkDirectoryMatches = createMemo(() => expectedDirectory() !== "" && sdk.directory === expectedDirectory())
 
   // Session key for tabs
   const sessionKey = createMemo(() =>
-    props.mode === "single"
-      ? `${params.dir}${params.id ? "/" + params.id : ""}`
-      : `multi-${props.paneId}-${props.directory}${props.sessionId ? "/" + props.sessionId : ""}`,
+    `multi-${props.paneId ?? "pane"}-${props.directory}${props.sessionId ? "/" + props.sessionId : ""}`,
   )
 
   // Tab management
@@ -132,77 +96,6 @@ export function SessionPane(props: SessionPaneProps) {
     sessionId,
   })
 
-  const [setupStore, setSetupStore, _, setupReady] = persisted(
-    Persist.global("session-setup", ["session-setup.v1"]),
-    createStore<SessionSetupStore>({
-      entries: {},
-      used: {},
-    }),
-  )
-  const [activeSetupKey, setActiveSetupKey] = createSignal<string | undefined>(undefined)
-  const [restoringSetup, setRestoringSetup] = createSignal(false)
-  const [pendingSetupRestore, setPendingSetupRestore] = createSignal(false)
-
-  const setupKey = createMemo(() => {
-    const id = sessionId()
-    if (!id) return undefined
-    const directory = props.directory || sync.directory
-    if (!directory) return undefined
-    return `${directory}:${id}`
-  })
-
-  function pruneSetupStore() {
-    const keys = Object.keys(setupStore.entries)
-    if (keys.length <= MAX_SESSION_SETUP) return
-    const ordered = keys.slice().sort((a, b) => (setupStore.used[b] ?? 0) - (setupStore.used[a] ?? 0))
-    const drop = ordered.slice(MAX_SESSION_SETUP)
-    if (drop.length === 0) return
-    setSetupStore(
-      produce((draft) => {
-        for (const key of drop) {
-          delete draft.entries[key]
-          delete draft.used[key]
-        }
-      }),
-    )
-  }
-
-  function storeSetup(key: string, next: SessionSetup) {
-    setSetupStore("entries", key, next)
-    setSetupStore("used", key, Date.now())
-    pruneSetupStore()
-  }
-
-  function snapshotSetup() {
-    const currentAgent = local.agent.current()
-    const currentModel = local.model.current()
-    if (!currentAgent || !currentModel) return undefined
-    return {
-      agent: currentAgent.name,
-      model: { providerID: currentModel.provider.id, modelID: currentModel.id },
-      variant: local.model.variant.current(),
-      modeId: local.mode.current()?.id,
-      thinking: local.model.thinking.current(),
-    }
-  }
-
-  function restoreSetup(setup: SessionSetup, key: string) {
-    setRestoringSetup(true)
-    if (setup.modeId) local.mode.set(setup.modeId)
-    queueMicrotask(() => {
-      if (activeSetupKey() !== key) {
-        setRestoringSetup(false)
-        return
-      }
-      if (setup.agent) local.agent.set(setup.agent)
-      const model = setup.model
-      if (model) local.model.set(model)
-      if (model) local.model.variant.set(setup.variant)
-      if (setup.thinking !== undefined) local.model.thinking.set(setup.thinking)
-      setRestoringSetup(false)
-    })
-  }
-
   const renderedUserMessages = createMemo(() => {
     const messages = sessionMessages.visibleUserMessages()
     const limit = store.turnLimit
@@ -214,20 +107,19 @@ export function SessionPane(props: SessionPaneProps) {
   // Focus state
   const isFocused = createMemo(() => props.isFocused?.() ?? true)
 
-  // Header overlay hook (only for multi mode)
+  // Header overlay hook
   const headerOverlay = useHeaderOverlay({
-    mode: props.mode === "multi" ? "overlay" : "scroll",
+    mode: "overlay",
     isFocused,
   })
-  const paneDraggable = props.mode === "multi" && props.paneId ? createDraggable(props.paneId) : undefined
-  const paneDroppable = props.mode === "multi" && props.paneId ? createDroppable(props.paneId) : undefined
+  const paneDraggable = props.paneId ? createDraggable(props.paneId) : undefined
+  const paneDroppable = props.paneId ? createDroppable(props.paneId) : undefined
   const paneDragHandlers = paneDraggable ? paneDraggable.dragActivators : {}
 
   // Session sync hook
   useSessionSync({
     sessionId,
     directoryMatches: sdkDirectoryMatches,
-    onNotFound: props.mode === "single" ? () => navigate(`/${params.dir}/session`, { replace: true }) : undefined,
   })
 
   // Status
@@ -262,7 +154,6 @@ export function SessionPane(props: SessionPaneProps) {
     on(
       () => working(),
       (isWorking, prevWorking) => {
-        if (props.mode !== "multi") return
         if (isWorking) return
         if (!prevWorking) return
         const id = sessionMessages.lastUserMessage()?.id
@@ -271,100 +162,6 @@ export function SessionPane(props: SessionPaneProps) {
       },
     ),
   )
-
-  createEffect(
-    on(
-      () => [setupKey(), setupReady(), info()?.mode?.id] as const,
-      ([key, ready, sessionModeId]) => {
-        if (props.mode !== "single") return
-        if (!ready) return
-        setActiveSetupKey(key)
-        setPendingSetupRestore(false)
-        if (!key) return
-        const id = sessionId()
-        if (!id) return
-        const cached = untrack(() => setupStore.entries[key])
-        const modeId = cached?.modeId ?? sessionModeId
-        if (cached) {
-          restoreSetup({ ...cached, modeId }, key)
-          return
-        }
-        const msg = untrack(() => sessionMessages.lastUserMessage())
-        if (!msg) {
-          const messages = sync.data.message[id]
-          if (messages === undefined) {
-            if (modeId) restoreSetup({ modeId }, key)
-            setPendingSetupRestore(true)
-            return
-          }
-          if (modeId) restoreSetup({ modeId }, key)
-          return
-        }
-        const recovered: SessionSetup = {
-          agent: msg.agent,
-          model: msg.model,
-          variant: msg.variant,
-          modeId,
-          thinking: msg.thinking,
-        }
-        restoreSetup(recovered, key)
-        storeSetup(key, recovered)
-      },
-    ),
-  )
-
-  createEffect(
-    on(
-      () => sessionMessages.lastUserMessage()?.id,
-      () => {
-        if (props.mode !== "single") return
-        if (!pendingSetupRestore()) return
-        const key = setupKey()
-        if (!key) return
-        if (!setupReady()) return
-        const cached = untrack(() => setupStore.entries[key])
-        if (cached) {
-          setPendingSetupRestore(false)
-          return
-        }
-        const msg = sessionMessages.lastUserMessage()
-        if (!msg) return
-        const recovered: SessionSetup = {
-          agent: msg.agent,
-          model: msg.model,
-          variant: msg.variant,
-          modeId: info()?.mode?.id,
-          thinking: msg.thinking,
-        }
-        restoreSetup(recovered, key)
-        storeSetup(key, recovered)
-        setPendingSetupRestore(false)
-      },
-    ),
-  )
-
-  createEffect(() => {
-    if (props.mode !== "single") return
-    const key = activeSetupKey()
-    if (!key) return
-    if (!setupReady()) return
-    if (restoringSetup()) return
-    if (pendingSetupRestore()) return
-    const next = snapshotSetup()
-    if (!next) return
-    storeSetup(key, next)
-  })
-
-  createEffect(() => {
-    if (props.mode !== "single") return
-    if (!pendingSetupRestore()) return
-    const id = sessionId()
-    if (!id) return
-    const messages = sync.data.message[id]
-    if (messages === undefined) return
-    if (messages.length > 0) return
-    setPendingSetupRestore(false)
-  })
 
   // Reset user interaction on session change
   createEffect(
@@ -388,7 +185,6 @@ export function SessionPane(props: SessionPaneProps) {
   )
 
   createEffect(() => {
-    if (props.mode !== "multi") return
     if (!isFocused()) return
     const id = sessionId()
     if (!id) return
@@ -399,7 +195,7 @@ export function SessionPane(props: SessionPaneProps) {
   useSessionCommands({
     sessionId,
     sessionKey,
-    isEnabled: props.mode === "multi" ? isFocused : () => true,
+    isEnabled: isFocused,
     onNavigateMessage: sessionMessages.navigateByOffset,
     onToggleSteps: () => {
       const id = sessionMessages.activeMessage()?.id
@@ -412,40 +208,6 @@ export function SessionPane(props: SessionPaneProps) {
     visibleUserMessages: sessionMessages.visibleUserMessages,
   })
 
-  // Auto-focus input on keydown (single mode only)
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (props.mode !== "single") return
-    const activeElement = document.activeElement as HTMLElement | undefined
-    if (activeElement) {
-      const isProtected = activeElement.closest("[data-prevent-autofocus]")
-      const isInput = /^(INPUT|TEXTAREA|SELECT)$/.test(activeElement.tagName) || activeElement.isContentEditable
-      if (isProtected || isInput) return
-    }
-    if (dialog.active) return
-
-    const inputRef = props.promptInputRef?.()
-    if (activeElement === inputRef) {
-      if (event.key === "Escape") inputRef?.blur()
-      return
-    }
-
-    if (event.key.length === 1 && event.key !== "Unidentified" && !(event.ctrlKey || event.metaKey)) {
-      inputRef?.focus()
-    }
-  }
-
-  onMount(() => {
-    if (props.mode === "single") {
-      document.addEventListener("keydown", handleKeyDown)
-    }
-  })
-
-  onCleanup(() => {
-    if (props.mode === "single") {
-      document.removeEventListener("keydown", handleKeyDown)
-    }
-  })
-
   // Computed: show tabs panel
   const contextOpen = createMemo(() => tabs().active() === "context" || tabs().all().includes("context"))
   const allowLocalReview = createMemo(() => props.reviewMode !== "global")
@@ -456,7 +218,7 @@ export function SessionPane(props: SessionPaneProps) {
       (diffs().length > 0 || tabs().all().length > 0 || contextOpen()),
   )
 
-  const sessionTurnPadding = createMemo(() => (props.mode === "single" ? "pb-20" : "pb-0"))
+  const sessionTurnPadding = () => "pb-0"
 
   const desktopAutoScroll = createAutoScroll({
     working,
@@ -713,7 +475,7 @@ export function SessionPane(props: SessionPaneProps) {
 
   // Desktop session content
   const DesktopSessionContent = () => (
-    <Show when={sessionId()} fallback={props.mode === "single" ? <NewSessionView /> : null}>
+    <Show when={sessionId()} fallback={<NewSessionView />}>
       <div class="flex items-stretch justify-start h-full min-h-0">
         <SessionMessageRail
           messages={sessionMessages.visibleUserMessages()}
@@ -773,21 +535,11 @@ export function SessionPane(props: SessionPaneProps) {
     </Show>
   )
 
-  // Multi mode container styles
-  const multiContainerClass = () =>
-    props.mode === "multi"
-      ? "relative size-full flex flex-col overflow-hidden transition-all duration-150"
-      : "relative size-full overflow-hidden flex flex-col transition-all duration-150"
-
-  const multiContainerStyle = () =>
-    props.mode === "multi" && hasMultiplePanes() && !isFocused() ? { opacity: 0.5 } : undefined
-
-  const multiContainerClassList = () => ({
-    "bg-background-base": props.mode === "single",
-  })
+  const containerClass = "relative size-full flex flex-col overflow-hidden transition-all duration-150"
+  const containerStyle = () => (hasMultiplePanes() && !isFocused() ? { opacity: 0.5 } : undefined)
 
   const handleMultiPaneMouseDown = (event: MouseEvent) => {
-    if (props.mode !== "multi" || !props.paneId || !multiPane) return
+    if (!props.paneId) return
     const target = event.target as HTMLElement
     const isInteractive = target.closest('button, input, select, textarea, [contenteditable], [role="button"]')
     if (!isInteractive) {
@@ -807,15 +559,14 @@ export function SessionPane(props: SessionPaneProps) {
   return (
     <div
       ref={setContainerRef}
-      class={multiContainerClass()}
-      classList={multiContainerClassList()}
-      style={multiContainerStyle()}
-      onMouseDown={props.mode === "multi" ? handleMultiPaneMouseDown : undefined}
-      onMouseEnter={props.mode === "multi" ? headerOverlay.handleMouseEnter : undefined}
-      onMouseLeave={props.mode === "multi" ? headerOverlay.handleMouseLeave : undefined}
-      onMouseMove={props.mode === "multi" ? headerOverlay.handleMouseMove : undefined}
+      class={containerClass}
+      style={containerStyle()}
+      onMouseDown={handleMultiPaneMouseDown}
+      onMouseEnter={headerOverlay.handleMouseEnter}
+      onMouseLeave={headerOverlay.handleMouseLeave}
+      onMouseMove={headerOverlay.handleMouseMove}
     >
-      <Show when={props.mode === "multi" && hasMultiplePanes()}>
+      <Show when={hasMultiplePanes()}>
         <div
           class="pointer-events-none absolute inset-0 z-30 border"
           classList={{
@@ -826,45 +577,39 @@ export function SessionPane(props: SessionPaneProps) {
       </Show>
 
       {/* Header */}
-      <Show when={props.mode === "single"}>
-        <SessionPaneHeader mode="single" directory={props.directory} sessionId={sessionId()} isFocused={isFocused} />
-      </Show>
-      <Show when={props.mode === "multi"}>
-        <div
-          ref={setHeaderDragRef}
-          class="absolute top-0 left-0 right-0 z-40 transition-opacity duration-150"
-          classList={{
-            "opacity-100 pointer-events-auto": headerOverlay.showHeader(),
-            "opacity-0 pointer-events-none": !headerOverlay.showHeader(),
-            "cursor-grab": !!paneDraggable,
-            "cursor-grabbing": paneDraggable?.isActiveDraggable,
-          }}
-          {...paneDragHandlers}
-          onMouseDown={(e) => {
-            e.stopPropagation()
-          }}
-          onMouseEnter={() => headerOverlay.setIsOverHeader(true)}
-          onMouseLeave={() => headerOverlay.setIsOverHeader(false)}
-          onFocusIn={() => headerOverlay.setHeaderHasFocus(true)}
-          onFocusOut={(e) => {
-            const relatedTarget = e.relatedTarget as HTMLElement | null
-            if (!e.currentTarget.contains(relatedTarget)) {
-              headerOverlay.setHeaderHasFocus(false)
-            }
-          }}
-        >
-          <SessionPaneHeader
-            mode="multi"
-            paneId={props.paneId}
-            directory={props.directory}
-            sessionId={sessionId()}
-            isFocused={isFocused}
-            onSessionChange={props.onSessionChange}
-            onDirectoryChange={props.onDirectoryChange}
-            onClose={props.onClose}
-          />
-        </div>
-      </Show>
+      <div
+        ref={setHeaderDragRef}
+        class="absolute top-0 left-0 right-0 z-40 transition-opacity duration-150"
+        classList={{
+          "opacity-100 pointer-events-auto": headerOverlay.showHeader(),
+          "opacity-0 pointer-events-none": !headerOverlay.showHeader(),
+          "cursor-grab": !!paneDraggable,
+          "cursor-grabbing": paneDraggable?.isActiveDraggable,
+        }}
+        {...paneDragHandlers}
+        onMouseDown={(e) => {
+          e.stopPropagation()
+        }}
+        onMouseEnter={() => headerOverlay.setIsOverHeader(true)}
+        onMouseLeave={() => headerOverlay.setIsOverHeader(false)}
+        onFocusIn={() => headerOverlay.setHeaderHasFocus(true)}
+        onFocusOut={(e) => {
+          const relatedTarget = e.relatedTarget as HTMLElement | null
+          if (!e.currentTarget.contains(relatedTarget)) {
+            headerOverlay.setHeaderHasFocus(false)
+          }
+        }}
+      >
+        <SessionPaneHeader
+          paneId={props.paneId}
+          directory={props.directory}
+          sessionId={sessionId()}
+          isFocused={isFocused}
+          onSessionChange={props.onSessionChange}
+          onDirectoryChange={props.onDirectoryChange}
+          onClose={props.onClose}
+        />
+      </div>
 
       <div class="relative z-10 flex-1 min-h-0 flex flex-col">
         {/* Mobile view */}
@@ -885,14 +630,11 @@ export function SessionPane(props: SessionPaneProps) {
         />
 
         {/* Desktop view */}
-        <div class={props.mode === "single" ? "hidden md:flex min-h-0 grow w-full" : "flex-1 min-h-0 flex"}>
+        <div class="flex-1 min-h-0 flex">
           <div
             class="@container relative shrink-0 py-3 flex flex-col gap-6 min-h-0 h-full"
             style={{
               width: showTabs() ? `${layout.session.width()}px` : "100%",
-            }}
-            classList={{
-              "bg-background-stronger": props.mode === "single",
             }}
           >
             <div class="flex-1 min-h-0 overflow-hidden">

@@ -14,6 +14,7 @@ import { DialogSelectModel } from "@/components/dialog-select-model"
 import { DialogSelectMcp } from "@/components/dialog-select-mcp"
 import { showToast } from "@opencode-ai/ui/toast"
 import { extractPromptFromParts } from "@/utils/prompt"
+import { base64Encode } from "@opencode-ai/util/encode"
 
 export interface UseSessionCommandsOptions {
   sessionId: Accessor<string | undefined>
@@ -57,7 +58,7 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
       keybind: "mod+shift+s",
       slash: "new",
       disabled: !enabled(),
-      onSelect: () => navigate(`/multi?dir=${encodeURIComponent(sdk.directory)}`),
+      onSelect: () => navigate(`/${base64Encode(sdk.directory)}/session`),
     },
     {
       id: "file.open",
