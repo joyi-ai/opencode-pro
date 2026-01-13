@@ -29,6 +29,7 @@ type MultiPaneState = {
   focusedPaneId?: string
   maximizedPaneId?: string
   grid: Record<number, PaneGridState | undefined>
+  previousPanes: PaneConfig[]
 }
 
 const MAX_PANES_PER_PAGE = 12
@@ -58,6 +59,7 @@ export const { use: useMultiPane, provider: MultiPaneProvider } = createSimpleCo
       focusedPaneId: undefined,
       maximizedPaneId: undefined,
       grid: {},
+      previousPanes: [],
     })
 
     const totalPages = createMemo(() => Math.max(1, Math.ceil(store.panes.length / MAX_PANES_PER_PAGE)))
@@ -75,6 +77,9 @@ export const { use: useMultiPane, provider: MultiPaneProvider } = createSimpleCo
       return store.panes.find((p) => p.id === store.focusedPaneId)
     })
 
+    const previousPanes = createMemo(() => store.previousPanes)
+    const hasPreviousPanes = createMemo(() => store.previousPanes.length > 0)
+
     return {
       panes: createMemo(() => store.panes),
       visiblePanes,
@@ -84,6 +89,8 @@ export const { use: useMultiPane, provider: MultiPaneProvider } = createSimpleCo
       focusedPaneId: createMemo(() => store.focusedPaneId),
       focusedPane,
       maximizedPaneId: createMemo(() => store.maximizedPaneId),
+      previousPanes,
+      hasPreviousPanes,
       grid: {
         get(page: number, nextLayout: PaneLayout) {
           const entry = store.grid[page]
@@ -267,12 +274,34 @@ export const { use: useMultiPane, provider: MultiPaneProvider } = createSimpleCo
 
       clear() {
         batch(() => {
+          // Save panes with active sessions before clearing
+          const panesWithSessions = store.panes.filter((p) => p.sessionId)
+          if (panesWithSessions.length > 0) {
+            setStore("previousPanes", panesWithSessions)
+          }
           setStore("panes", [])
           setStore("currentPage", 0)
           setStore("focusedPaneId", undefined)
           setStore("maximizedPaneId", undefined)
           setStore("grid", {})
         })
+      },
+
+      restore() {
+        if (store.previousPanes.length === 0) return
+        batch(() => {
+          // Generate new IDs for restored panes to avoid conflicts
+          const restoredPanes = store.previousPanes.map((p) => ({
+            ...p,
+            id: generatePaneId(),
+          }))
+          setStore("panes", restoredPanes)
+          setStore("previousPanes", [])
+          setStore("currentPage", 0)
+          setStore("focusedPaneId", restoredPanes[0]?.id)
+          setStore("maximizedPaneId", undefined)
+        })
+        triggerShiftingGradient()
       },
 
       async clonePane(id: string) {

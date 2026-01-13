@@ -372,7 +372,6 @@ export namespace SessionPrompt {
       item.reject()
     }
     delete s[sessionID]
-    SessionStatus.set(sessionID, { type: "idle" })
     return
   }
 
