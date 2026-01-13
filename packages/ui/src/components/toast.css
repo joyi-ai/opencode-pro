@@ -1,7 +1,7 @@
 [data-component="toast-region"] {
   position: fixed;
-  bottom: 48px;
-  right: 32px;
+  bottom: 16px;
+  right: 16px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -170,6 +170,31 @@
     width: var(--kb-toast-progress-fill-width);
     background-color: var(--color-primary);
     transition: width 250ms linear;
+  }
+
+  &[data-variant="notifier"] {
+    padding: 0;
+    gap: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  &[data-variant="notifier"] [data-slot="toast-content"] {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  &[data-variant="notifier"] [data-slot="toast-title"],
+  &[data-variant="notifier"] [data-slot="toast-description"] {
+    color: var(--text-strong);
+  }
+
+  &[data-variant="notifier"] [data-slot="toast-icon"],
+  &[data-variant="notifier"] [data-slot="toast-close-button"],
+  &[data-variant="notifier"] [data-slot="toast-actions"],
+  &[data-variant="notifier"] [data-slot="toast-progress-track"] {
+    display: none;
   }
 }
 

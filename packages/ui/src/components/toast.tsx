@@ -87,7 +87,7 @@ export const Toast = Object.assign(ToastRoot, {
 
 export { toaster }
 
-export type ToastVariant = "default" | "success" | "error" | "loading"
+export type ToastVariant = "default" | "success" | "error" | "loading" | "notifier"
 
 export interface ToastAction {
   label: string

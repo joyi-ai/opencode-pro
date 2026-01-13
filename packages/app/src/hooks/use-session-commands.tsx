@@ -42,6 +42,12 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
   const view = createMemo(() => layout.view(options.sessionKey()))
 
   const enabled = () => options.isEnabled?.() ?? true
+  const notify = (label: string) => {
+    showToast({
+      variant: "notifier",
+      title: label,
+    })
+  }
 
   command.register(() => [
     {
@@ -133,6 +139,30 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
       },
     },
     {
+      id: "model.cycle",
+      title: "Cycle model",
+      description: "Switch to the next recent model",
+      category: "Model",
+      keybind: "f2",
+      disabled: !enabled(),
+      onSelect: () => {
+        local.model.cycle(1)
+        notify(local.model.current()?.name ?? "Model")
+      },
+    },
+    {
+      id: "model.cycle.reverse",
+      title: "Cycle model backwards",
+      description: "Switch to the previous recent model",
+      category: "Model",
+      keybind: "shift+f2",
+      disabled: !enabled(),
+      onSelect: () => {
+        local.model.cycle(-1)
+        notify(local.model.current()?.name ?? "Model")
+      },
+    },
+    {
       id: "mcp.toggle",
       title: "Toggle MCPs",
       description: "Toggle MCPs",
@@ -147,10 +177,13 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
       title: "Cycle agent",
       description: "Switch to the next agent",
       category: "Agent",
-      keybind: "mod+.",
+      keybind: "tab,mod+.",
       slash: "agent",
       disabled: !enabled(),
-      onSelect: () => local.agent.move(1),
+      onSelect: () => {
+        local.agent.move(1)
+        notify(local.agent.current()?.name ?? "Agent")
+      },
     },
     {
       id: "agent.cycle.reverse",
@@ -159,7 +192,10 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
       category: "Agent",
       keybind: "shift+mod+.",
       disabled: !enabled(),
-      onSelect: () => local.agent.move(-1),
+      onSelect: () => {
+        local.agent.move(-1)
+        notify(local.agent.current()?.name ?? "Agent")
+      },
     },
     {
       id: "mode.cycle",
@@ -171,10 +207,7 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
       disabled: !enabled(),
       onSelect: () => {
         local.mode.move(1)
-        showToast({
-          title: "Mode changed",
-          description: `Switched to ${local.mode.current()?.name ?? "default"} mode`,
-        })
+        notify(local.mode.current()?.name ?? "Default")
       },
     },
     {
@@ -186,10 +219,19 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
       disabled: !enabled(),
       onSelect: () => {
         local.model.variant.cycle()
-        showToast({
-          title: "Thinking effort changed",
-          description: "The thinking effort has been changed to " + (local.model.variant.current() ?? "Default"),
-        })
+        notify(local.model.variant.current() ?? "Default")
+      },
+    },
+    {
+      id: "model.thinking.toggle",
+      title: "Toggle thinking",
+      description: "Toggle extended thinking",
+      category: "Model",
+      keybind: "mod+shift+e",
+      disabled: !enabled(),
+      onSelect: () => {
+        local.model.thinking.toggle()
+        notify(local.model.thinking.current() ? "Thinking On" : "Thinking Off")
       },
     },
     {

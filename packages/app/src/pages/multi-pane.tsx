@@ -20,10 +20,12 @@ import type { DragEvent } from "@thisbeyond/solid-dnd"
 import { getDraggableId } from "@/utils/solid-dnd"
 import { ShiftingGradient, GRAIN_DATA_URI } from "@/components/shifting-gradient"
 import { useTheme } from "@opencode-ai/ui/theme"
+import { showToast } from "@opencode-ai/ui/toast"
 import { MultiPanePromptPanel } from "@/components/multi-pane/prompt-panel"
 import { MultiPaneKanbanView } from "@/components/multi-pane/kanban-view"
 import { PaneHome } from "@/components/multi-pane/pane-home"
 import { getPaneProjectLabel, getPaneState, getPaneTitle } from "@/utils/pane"
+import { useCommand } from "@/context/command"
 
 // Provider wrapper for each pane (provides Local/Terminal context needed by SessionPane)
 function PaneSyncedProviders(props: { paneId: string; directory: string; children: any }) {
@@ -226,6 +228,7 @@ function MultiPaneContent() {
   const layout = useLayout()
   const globalSync = useGlobalSync()
   const theme = useTheme()
+  const command = useCommand()
   const [searchParams, setSearchParams] = useSearchParams()
   const [activePaneDraggable, setActivePaneDraggable] = createSignal<string | undefined>(undefined)
   const dragOverlayBackground = "hsl(from var(--background-base) h s l / 0.55)"
@@ -275,6 +278,116 @@ function MultiPaneContent() {
   })
   const defaultProject = createMemo(() => globalSync.data.path.directory)
   const getLastProject = () => recentProject() || defaultProject() || layout.projects.list()[0]?.worktree
+
+  const focusPaneByOffset = (offset: number) => {
+    const panes = visiblePanes()
+    if (panes.length === 0) return
+    const focusedId = multiPane.focusedPaneId()
+    const currentIndex = focusedId ? panes.findIndex((pane) => pane.id === focusedId) : -1
+    const baseIndex = currentIndex === -1 ? 0 : currentIndex
+    const nextIndex = (baseIndex + offset + panes.length) % panes.length
+    const nextPane = panes[nextIndex]
+    if (!nextPane) return
+    multiPane.setFocused(nextPane.id)
+  }
+
+  const handleKeybindAddPane = () => {
+    const focused = multiPane.focusedPane()
+    const directory = focused?.directory ?? getLastProject()
+    const id = multiPane.addPane(directory)
+    if (id) return
+    showToast({
+      title: "Tab limit reached",
+      description: "Maximum of 48 tabs allowed",
+    })
+  }
+
+  const handleKeybindClosePane = () => {
+    const focused = multiPane.focusedPaneId()
+    if (!focused) return
+    multiPane.removePane(focused)
+  }
+
+  const handleKeybindClonePane = () => {
+    const focused = multiPane.focusedPaneId()
+    if (!focused) return
+    void multiPane.clonePane(focused)
+  }
+
+  const handleKeybindToggleMaximize = () => {
+    const focused = multiPane.focusedPaneId()
+    if (!focused) return
+    multiPane.toggleMaximize(focused)
+  }
+
+  command.register(() => {
+    const paneCount = visiblePanes().length
+    const hasFocus = !!multiPane.focusedPaneId()
+
+    const commands = [
+      {
+        id: "pane.new",
+        title: "New pane",
+        description: "Create a new pane",
+        category: "Pane",
+        keybind: "mod+\\",
+        onSelect: handleKeybindAddPane,
+      },
+      {
+        id: "pane.clone",
+        title: "Clone pane",
+        description: "Duplicate the focused pane",
+        category: "Pane",
+        keybind: "mod+shift+\\",
+        disabled: !hasFocus,
+        onSelect: handleKeybindClonePane,
+      },
+      {
+        id: "pane.close",
+        title: "Close pane",
+        description: "Close the focused pane",
+        category: "Pane",
+        keybind: "mod+w",
+        disabled: !hasFocus,
+        onSelect: handleKeybindClosePane,
+      },
+      {
+        id: "pane.focus.next",
+        title: "Focus next pane",
+        category: "Pane",
+        keybind: "mod+],mod+tab",
+        disabled: paneCount <= 1,
+        onSelect: () => focusPaneByOffset(1),
+      },
+      {
+        id: "pane.focus.previous",
+        title: "Focus previous pane",
+        category: "Pane",
+        keybind: "mod+[,mod+shift+tab",
+        disabled: paneCount <= 1,
+        onSelect: () => focusPaneByOffset(-1),
+      },
+      {
+        id: "pane.maximize.toggle",
+        title: multiPane.maximizedPaneId() ? "Restore pane" : "Maximize pane",
+        description: "Toggle pane maximization",
+        category: "Pane",
+        keybind: "mod+shift+m",
+        disabled: !hasFocus,
+        onSelect: handleKeybindToggleMaximize,
+      },
+      ...Array.from({ length: 9 }, (_, index) => ({
+        id: `pane.focus.${index + 1}`,
+        title: `Focus pane ${index + 1}`,
+        category: "Pane",
+        keybind: `mod+${index + 1}`,
+        disabled: paneCount <= index,
+        onSelect: () => multiPane.focusPaneByIndex(index),
+      })),
+    ]
+
+    return commands
+  })
 
   onMount(() => {
     const rawDir = searchParams.dir
