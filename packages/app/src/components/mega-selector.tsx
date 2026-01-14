@@ -3,6 +3,8 @@ import { Component, createMemo, createSignal, For, Show } from "solid-js"
 import { Portal } from "solid-js/web"
 import { Button } from "@opencode-ai/ui/button"
 import { Icon } from "@opencode-ai/ui/icon"
+import type { IconName } from "@opencode-ai/ui/icons/provider"
+import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
 import { Switch } from "@opencode-ai/ui/switch"
 import { Tag } from "@opencode-ai/ui/tag"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
@@ -496,16 +498,22 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                 >
                   <For each={modelGroups()}>
                     {(group) => {
-                      const showProvider = group.kind !== "provider"
+                      const showProviderIcon = group.kind !== "provider"
                       return (
                         <div class="flex flex-col" classList={{ "bg-surface-raised-base-hover": group.alternate }}>
                           <div
-                            class="sticky top-0 z-10 px-2 py-1 text-11-regular text-text-subtle"
+                            class="sticky top-0 z-10 px-2 py-1.5 text-16-medium text-text-base flex items-center gap-2"
                             classList={{
                               "bg-surface-raised-stronger-non-alpha": !group.alternate,
                               "bg-surface-raised-base-hover": group.alternate,
                             }}
                           >
+                            <Show when={group.kind === "provider" && "providerID" in group}>
+                              <ProviderIcon
+                                id={((group as { providerID: string }).providerID === "codex" ? "openai" : (group as { providerID: string }).providerID) as IconName}
+                                class="size-4 shrink-0"
+                              />
+                            </Show>
                             {group.title}
                           </div>
                           <For each={group.models}>
@@ -530,6 +538,12 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                                       )
                                     }}
                                   >
+                                    <Show when={showProviderIcon}>
+                                      <ProviderIcon
+                                        id={(model.provider.id === "codex" ? "openai" : model.provider.id) as IconName}
+                                        class="size-4 shrink-0"
+                                      />
+                                    </Show>
                                     <span
                                       class="flex-1 text-13-regular truncate"
                                       classList={{
@@ -539,11 +553,6 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                                     >
                                       {model.name}
                                     </span>
-                                    <Show when={showProvider}>
-                                      <span class="text-11-regular text-text-weak truncate max-w-[96px]">
-                                        {model.provider.name}
-                                      </span>
-                                    </Show>
                                     <Show
                                       when={
                                         model.provider.id === "opencode" && (!model.cost || model.cost?.input === 0)
