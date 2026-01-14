@@ -633,10 +633,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         const variantChanged = prevPayload.variant !== payload.variant
         const thinkingChanged = prevPayload.thinking !== payload.thinking
         if (!modeChanged && !agentChanged && !modelChanged && !variantChanged && !thinkingChanged) return
+
+        // Don't sync mode changes if session already has messages
+        const sessionMessages = sync.data.message[sessionId]
+        const hasMessages = sessionMessages && sessionMessages.length > 0
+        const effectiveModeChanged = modeChanged && !hasMessages
+
         sdk.client.session
           .update({
             sessionID: sessionId,
-            mode: payload.mode,
+            mode: effectiveModeChanged ? payload.mode : undefined,
             agent: payload.agent,
             model: payload.model,
             variant: payload.variant,
@@ -1961,6 +1967,26 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const handleSubmit = async (event: Event) => {
     event.preventDefault()
     if (submitting()) return
+
+    // Prevent mode change if session already has messages
+    const existingSession = info()
+    if (existingSession) {
+      const sessionMessages = sync.data.message[existingSession.id]
+      const hasMessages = sessionMessages && sessionMessages.length > 0
+      if (hasMessages) {
+        const currentModeId = local.mode.current()?.id
+        const sessionModeId = existingSession.mode?.id
+        if (currentModeId && sessionModeId && currentModeId !== sessionModeId) {
+          local.mode.set(sessionModeId)
+          showToast({
+            variant: "notifier",
+            title: "Cannot change mode, not compatible",
+          })
+          return
+        }
+      }
+    }
+
     const currentPrompt = prompt.current()
     const text = currentPrompt.map((part) => ("content" in part ? part.content : "")).join("")
     const hasImageAttachments = store.imageAttachments.length > 0
