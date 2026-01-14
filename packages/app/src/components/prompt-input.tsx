@@ -639,19 +639,34 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         const thinkingChanged = prevPayload.thinking !== payload.thinking
         if (!modeChanged && !agentChanged && !modelChanged && !variantChanged && !thinkingChanged) return
 
+        // Compare against session's stored values to avoid unnecessary updates
+        // This prevents updating when we're just restoring the session's own values (e.g., on navigation)
+        const session = info()
+        if (!session) return
+
+        const sessionModeId = session.mode?.id
+        const actualModeChanged = modeKey(payload.mode) !== sessionModeId
+        const actualAgentChanged = payload.agent !== session.agent
+        const actualModelChanged = !isSameModel(payload.model, session.model)
+        const actualVariantChanged = (payload.variant ?? undefined) !== session.variant
+        const actualThinkingChanged = payload.thinking !== session.thinking
+
+        // If nothing actually differs from what's stored, skip the update
+        if (!actualModeChanged && !actualAgentChanged && !actualModelChanged && !actualVariantChanged && !actualThinkingChanged) return
+
         // Don't sync mode changes if session already has messages
         const sessionMessages = sync.data.message[sessionId]
         const hasMessages = sessionMessages && sessionMessages.length > 0
-        const effectiveModeChanged = modeChanged && !hasMessages
+        const effectiveModeChanged = actualModeChanged && !hasMessages
 
         sdk.client.session
           .update({
             sessionID: sessionId,
             mode: effectiveModeChanged ? payload.mode : undefined,
-            agent: payload.agent,
-            model: payload.model,
-            variant: payload.variant,
-            thinking: payload.thinking,
+            agent: actualAgentChanged ? payload.agent : undefined,
+            model: actualModelChanged ? payload.model : undefined,
+            variant: actualVariantChanged ? payload.variant : undefined,
+            thinking: actualThinkingChanged ? payload.thinking : undefined,
           })
           .catch(() => {})
       },
