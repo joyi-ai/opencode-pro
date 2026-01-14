@@ -777,6 +777,13 @@ export type Session = {
   mode?: {
     id: string
   }
+  agent?: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
+  variant?: string | null
+  thinking?: boolean
   worktree?: WorktreeInfo
   worktreeRequested?: boolean
   worktreeCleanup?: "ask" | "always" | "never"
@@ -1975,6 +1982,18 @@ export type WorktreeCreateInput = {
 
 export type VcsInfo = {
   branch: string
+}
+
+export type GitBranches = {
+  data: Array<string>
+}
+
+export type GitCommits = {
+  data: Array<{
+    hash: string
+    message: string
+    author: string
+  }>
 }
 
 export type TextPartInput = {
@@ -3303,6 +3322,46 @@ export type VcsGetResponses = {
 
 export type VcsGetResponse = VcsGetResponses[keyof VcsGetResponses]
 
+export type GitBranchesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/git/branches"
+}
+
+export type GitBranchesResponses = {
+  /**
+   * List of branch names
+   */
+  200: GitBranches
+}
+
+export type GitBranchesResponse = GitBranchesResponses[keyof GitBranchesResponses]
+
+export type GitCommitsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    /**
+     * Maximum number of commits to return
+     */
+    limit?: number
+  }
+  url: "/git/commits"
+}
+
+export type GitCommitsResponses = {
+  /**
+   * List of commits
+   */
+  200: GitCommits
+}
+
+export type GitCommitsResponse = GitCommitsResponses[keyof GitCommitsResponses]
+
 export type SessionListData = {
   body?: never
   path?: never
@@ -3343,6 +3402,13 @@ export type SessionCreateData = {
     mode?: {
       id: string
     }
+    agent?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+    variant?: string | null
+    thinking?: boolean
   }
   path?: never
   query?: {
@@ -3474,6 +3540,13 @@ export type SessionUpdateData = {
     mode?: {
       id: string
     }
+    agent?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+    variant?: string | null
+    thinking?: boolean
   }
   path: {
     sessionID: string

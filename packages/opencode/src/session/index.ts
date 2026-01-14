@@ -35,6 +35,10 @@ export namespace Session {
     const data = row.data
       ? (JSON.parse(row.data) as {
           mode?: SessionMode.Info
+          agent?: string
+          model?: Session.Model
+          variant?: string | null
+          thinking?: boolean
           worktreeRequested?: boolean
           worktreeCleanup?: Worktree.CleanupMode
         })
@@ -67,6 +71,10 @@ export namespace Session {
       worktreeRequested: data?.worktreeRequested,
       worktreeCleanup: data?.worktreeCleanup,
       mode: data?.mode,
+      agent: data?.agent,
+      model: data?.model,
+      variant: data?.variant,
+      thinking: data?.thinking,
     }
   }
 
@@ -86,13 +94,30 @@ export namespace Session {
   function cacheData(session: Info) {
     const data = {
       ...(session.mode ? { mode: session.mode } : {}),
+      ...(session.agent ? { agent: session.agent } : {}),
+      ...(session.model ? { model: session.model } : {}),
+      ...(session.variant !== undefined ? { variant: session.variant } : {}),
+      ...(session.thinking !== undefined ? { thinking: session.thinking } : {}),
       ...(session.worktreeRequested ? { worktreeRequested: true } : {}),
       ...(session.worktreeCleanup ? { worktreeCleanup: session.worktreeCleanup } : {}),
     }
-    const has = data.mode || data.worktreeRequested || data.worktreeCleanup
+    const has =
+      data.mode !== undefined ||
+      data.agent !== undefined ||
+      data.model !== undefined ||
+      data.variant !== undefined ||
+      data.thinking !== undefined ||
+      data.worktreeRequested !== undefined ||
+      data.worktreeCleanup !== undefined
     if (!has) return undefined
     return data
   }
+
+  export const Model = z.object({
+    providerID: z.string(),
+    modelID: z.string(),
+  })
+  export type Model = z.output<typeof Model>
 
   export const Info = z
     .object({
@@ -131,6 +156,10 @@ export namespace Session {
         })
         .optional(),
       mode: SessionMode.Info.optional(),
+      agent: z.string().optional(),
+      model: Model.optional(),
+      variant: z.string().nullable().optional(),
+      thinking: z.boolean().optional(),
       worktree: Worktree.Info.optional(),
       worktreeRequested: z.boolean().optional(),
       worktreeCleanup: Worktree.CleanupMode.optional(),
@@ -194,6 +223,10 @@ export namespace Session {
         useWorktree: z.boolean().optional(),
         worktreeCleanup: Worktree.CleanupMode.optional(),
         mode: SessionMode.Info.optional(),
+        agent: Info.shape.agent,
+        model: Model.optional(),
+        variant: Info.shape.variant,
+        thinking: Info.shape.thinking,
       })
       .optional(),
     async (input) => {
@@ -205,6 +238,10 @@ export namespace Session {
         useWorktree: input?.useWorktree,
         worktreeCleanup: input?.worktreeCleanup,
         mode: input?.mode,
+        agent: input?.agent,
+        model: input?.model,
+        variant: input?.variant,
+        thinking: input?.thinking,
       })
     },
   )
@@ -223,6 +260,10 @@ export namespace Session {
         useWorktree: input.useWorktree,
         worktreeCleanup: input.worktreeCleanup,
         mode: parent.mode,
+        agent: parent.agent,
+        model: parent.model,
+        variant: parent.variant,
+        thinking: parent.thinking,
       })
       const msgs = await messages({ sessionID: input.sessionID })
       const idMap = new Map<string, string>()
@@ -268,6 +309,10 @@ export namespace Session {
     useWorktree?: boolean
     worktreeCleanup?: Worktree.CleanupMode
     mode?: SessionMode.Info
+    agent?: string
+    model?: Model
+    variant?: string | null
+    thinking?: boolean
   }) {
     const sessionId = Identifier.descending("session", input.id)
     const mode = SessionMode.normalize(input.mode)
@@ -283,6 +328,10 @@ export namespace Session {
       title: input.title ?? createDefaultTitle(!!input.parentID),
       permission: input.permission,
       mode,
+      agent: input.agent,
+      model: input.model,
+      variant: input.variant,
+      thinking: input.thinking,
       worktree: undefined,
       worktreeRequested: worktreeRequested ? true : undefined,
       worktreeCleanup,

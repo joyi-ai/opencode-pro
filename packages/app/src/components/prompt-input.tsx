@@ -494,6 +494,27 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!value) return ""
     return value.id
   }
+  const isSameModel = (
+    prev: { providerID: string; modelID: string } | undefined,
+    next: { providerID: string; modelID: string } | undefined,
+  ) => {
+    if (!prev && !next) return true
+    if (!prev || !next) return false
+    return prev.providerID === next.providerID && prev.modelID === next.modelID
+  }
+  const sessionUpdatePayload = createMemo(() => {
+    const agent = local.agent.current()
+    const model = local.model.current()
+    const variant = local.model.variant.current()
+    const thinking = local.model.thinking.current()
+    return {
+      mode: modePayload(),
+      agent: agent ? agent.name : undefined,
+      model: model ? { providerID: model.provider.id, modelID: model.id } : undefined,
+      variant: variant === undefined ? null : variant,
+      thinking,
+    }
+  })
   const isClaudeCodeMode = createMemo(() => local.mode.current()?.id === "claude-code")
 
   const [store, setStore] = createStore<{
@@ -595,16 +616,33 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   createEffect(
     on(
-      () => [effectiveSessionId(), modePayload()] as const,
-      ([sessionId, mode], prev) => {
-        if (!sessionId || !mode || !prev) return
+      () => [effectiveSessionId(), sessionUpdatePayload()] as const,
+      (value, prev) => {
+        if (!prev) return
+        const sessionId = value[0]
+        const payload = value[1]
+        if (!sessionId || !payload) return
         const prevSessionId = prev[0]
         if (!prevSessionId) return
         if (prevSessionId !== sessionId) return
-        const prevMode = prev[1]
-        if (!prevMode) return
-        if (modeKey(prevMode) === modeKey(mode)) return
-        sdk.client.session.update({ sessionID: sessionId, mode }).catch(() => {})
+        const prevPayload = prev[1]
+        if (!prevPayload) return
+        const modeChanged = modeKey(prevPayload.mode) !== modeKey(payload.mode)
+        const agentChanged = prevPayload.agent !== payload.agent
+        const modelChanged = !isSameModel(prevPayload.model, payload.model)
+        const variantChanged = prevPayload.variant !== payload.variant
+        const thinkingChanged = prevPayload.thinking !== payload.thinking
+        if (!modeChanged && !agentChanged && !modelChanged && !variantChanged && !thinkingChanged) return
+        sdk.client.session
+          .update({
+            sessionID: sessionId,
+            mode: payload.mode,
+            agent: payload.agent,
+            model: payload.model,
+            variant: payload.variant,
+            thinking: payload.thinking,
+          })
+          .catch(() => {})
       },
       { defer: true },
     ),
@@ -1941,8 +1979,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (!existing) {
         const worktreeEnabled = layout.worktree.enabled()
         const worktreeCleanup = layout.worktree.cleanup()
+        const meta = sessionUpdatePayload()
         const created = await sdk.client.session.create({
-          mode: modePayload(),
+          mode: meta.mode,
+          agent: meta.agent,
+          model: meta.model,
+          variant: meta.variant,
+          thinking: meta.thinking,
           ...(worktreeEnabled ? { useWorktree: true, worktreeCleanup } : {}),
         })
         existing = created.data ?? undefined

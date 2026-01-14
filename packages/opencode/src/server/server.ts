@@ -202,10 +202,21 @@ export namespace Server {
   function sessionCacheData(session: Session.Info) {
     const data = {
       ...(session.mode ? { mode: session.mode } : {}),
+      ...(session.agent ? { agent: session.agent } : {}),
+      ...(session.model ? { model: session.model } : {}),
+      ...(session.variant !== undefined ? { variant: session.variant } : {}),
+      ...(session.thinking !== undefined ? { thinking: session.thinking } : {}),
       ...(session.worktreeRequested ? { worktreeRequested: true } : {}),
       ...(session.worktreeCleanup ? { worktreeCleanup: session.worktreeCleanup } : {}),
     }
-    const has = data.mode || data.worktreeRequested || data.worktreeCleanup
+    const has =
+      data.mode !== undefined ||
+      data.agent !== undefined ||
+      data.model !== undefined ||
+      data.variant !== undefined ||
+      data.thinking !== undefined ||
+      data.worktreeRequested !== undefined ||
+      data.worktreeCleanup !== undefined
     if (!has) return undefined
     return data
   }
@@ -250,6 +261,10 @@ export namespace Server {
     const data = row.data
       ? (JSON.parse(row.data) as {
           mode?: SessionMode.Info
+          agent?: string
+          model?: Session.Model
+          variant?: string | null
+          thinking?: boolean
           worktreeRequested?: boolean
           worktreeCleanup?: Worktree.CleanupMode
         })
@@ -282,6 +297,10 @@ export namespace Server {
       worktreeRequested: data?.worktreeRequested,
       worktreeCleanup: data?.worktreeCleanup,
       mode: data?.mode,
+      agent: data?.agent,
+      model: data?.model,
+      variant: data?.variant,
+      thinking: data?.thinking,
     }
   }
 
@@ -988,7 +1007,8 @@ export namespace Server {
             },
           }),
           async (c) => {
-            const result = await Bun.$`git branch --format=%(refname:short)`.quiet().nothrow().cwd(Instance.worktree).text()
+            const format = "%(refname:short)"
+            const result = await Bun.$`git branch --format=${format}`.quiet().nothrow().cwd(Instance.worktree).text()
             const branches = result
               .split("\n")
               .map((b) => b.trim())
@@ -1033,7 +1053,8 @@ export namespace Server {
           ),
           async (c) => {
             const { limit } = c.req.valid("query")
-            const result = await Bun.$`git log --oneline -n ${limit} --format=%H|%s|%an`
+            const format = "%H|%s|%an"
+            const result = await Bun.$`git log --oneline -n ${limit} --format=${format}`
               .quiet()
               .nothrow()
               .cwd(Instance.worktree)
@@ -1346,6 +1367,10 @@ export namespace Server {
                 })
                 .optional(),
               mode: SessionMode.Info.optional(),
+              agent: z.string().optional(),
+              model: Session.Model.optional(),
+              variant: z.string().nullable().optional(),
+              thinking: z.boolean().optional(),
             }),
           ),
           async (c) => {
@@ -1360,6 +1385,18 @@ export namespace Server {
               if (updates.mode !== undefined) {
                 const nextMode = SessionMode.normalize(updates.mode) ?? updates.mode
                 session.mode = nextMode
+              }
+              if (updates.agent !== undefined) {
+                session.agent = updates.agent
+              }
+              if (updates.model !== undefined) {
+                session.model = updates.model
+              }
+              if (updates.variant !== undefined) {
+                session.variant = updates.variant ?? undefined
+              }
+              if (updates.thinking !== undefined) {
+                session.thinking = updates.thinking
               }
             })
 

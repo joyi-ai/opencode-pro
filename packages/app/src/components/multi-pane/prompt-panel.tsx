@@ -6,6 +6,7 @@ import { useTerminal, type LocalPTY } from "@/context/terminal"
 import { usePrompt, type Prompt } from "@/context/prompt"
 import { useLocal } from "@/context/local"
 import { useSDK } from "@/context/sdk"
+import { useSync } from "@/context/sync"
 import { PromptInput } from "@/components/prompt-input"
 import { Terminal } from "@/components/terminal"
 import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
@@ -25,17 +26,23 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
   const prompt = usePrompt()
   const local = useLocal()
   const sdk = useSDK()
+  const sync = useSync()
   const sessionKey = createMemo(
     () => `multi-${props.paneId}-${sdk.directory}${props.sessionId ? "/" + props.sessionId : ""}`,
   )
   const view = createMemo(() => layout.view(sessionKey()))
+  const sessionInfo = createMemo(() => {
+    const sessionId = props.sessionId
+    if (!sessionId) return undefined
+    return sync.session.get(sessionId)
+  })
 
   let editorRef: HTMLDivElement | undefined
 
   type SessionCache = {
     agent: string | undefined
     model: { providerID: string; modelID: string } | undefined
-    variant: string | undefined
+    variant: string | null | undefined
     modeId: string | undefined
     thinking: boolean | undefined
   }
@@ -50,7 +57,7 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
     promptDirty: boolean
     agent: string | undefined
     model: { providerID: string; modelID: string } | undefined
-    variant: string | undefined
+    variant: string | null | undefined
     modeId: string | undefined
     thinking: boolean | undefined
   }
@@ -97,12 +104,32 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
       const model = source?.model
       if (model) local.model.set(model)
       const variant = source?.variant
-      if (variant !== undefined) local.model.variant.set(variant)
+      if (variant !== undefined) {
+        const next = variant ?? undefined
+        local.model.variant.set(next)
+      }
       const thinking = source?.thinking
       if (thinking !== undefined) local.model.thinking.set(thinking)
       setRestoring(false)
     })
     if (useCache && cached?.prompt && !prompt.dirty()) prompt.set(cached.prompt)
+  }
+
+  function mergeSessionState(info: ReturnType<typeof sessionInfo>, cached?: SessionCache) {
+    if (!info) return cached
+    const next: SessionCache = {
+      agent: cached?.agent,
+      model: cached?.model,
+      variant: cached?.variant,
+      modeId: cached?.modeId,
+      thinking: cached?.thinking,
+    }
+    if (info.agent !== undefined) next.agent = info.agent
+    if (info.model !== undefined) next.model = info.model
+    if (info.variant !== undefined) next.variant = info.variant
+    if (info.mode) next.modeId = info.mode.id
+    if (info.thinking !== undefined) next.thinking = info.thinking
+    return next
   }
 
   function pruneSessionCache() {
@@ -190,11 +217,12 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
 
   createEffect(
     on(
-      () => [props.paneId, props.sessionId, sdk.directory, sessionReady()] as const,
-      ([paneId, sessionId, , ready]) => {
+      () => [props.paneId, props.sessionId, sdk.directory, sessionReady(), sessionInfo()] as const,
+      ([paneId, sessionId, , ready, info]) => {
         if (!paneId) return
         const key = sessionKeyFor(sessionId)
-        const session = ready && key ? untrack(() => sessionStore.entries[key]) : undefined
+        const cached = ready && key ? untrack(() => sessionStore.entries[key]) : undefined
+        const session = mergeSessionState(info, cached)
         if (skipRestoreKey && key !== skipRestoreKey) {
           skipRestoreKey = undefined
         }

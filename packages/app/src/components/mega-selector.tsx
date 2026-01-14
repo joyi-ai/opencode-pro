@@ -208,10 +208,17 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
         return a.title.localeCompare(b.title)
       })
 
+    const stripedProviders = providers.map((group, index) => {
+      const alternate = index % 2 === 1
+      return { ...group, alternate }
+    })
+
     return [
-      ...(favorites.length > 0 ? [{ kind: "favorites" as const, title: "Favorites", models: favorites }] : []),
-      ...(recent.length > 0 ? [{ kind: "recent" as const, title: "Recent", models: recent }] : []),
-      ...providers,
+      ...(favorites.length > 0
+        ? [{ kind: "favorites" as const, title: "Favorites", models: favorites, alternate: false }]
+        : []),
+      ...(recent.length > 0 ? [{ kind: "recent" as const, title: "Recent", models: recent, alternate: false }] : []),
+      ...stripedProviders,
     ]
   })
 
@@ -470,8 +477,14 @@ export const MegaSelector: Component<{ class?: string }> = (props) => {
                     {(group) => {
                       const showProvider = group.kind !== "provider"
                       return (
-                        <div class="flex flex-col">
-                          <div class="sticky top-0 z-10 px-2 py-1 text-11-regular text-text-subtle bg-surface-raised-stronger-non-alpha">
+                        <div class="flex flex-col" classList={{ "bg-surface-raised-base-hover": group.alternate }}>
+                          <div
+                            class="sticky top-0 z-10 px-2 py-1 text-11-regular text-text-subtle"
+                            classList={{
+                              "bg-surface-raised-stronger-non-alpha": !group.alternate,
+                              "bg-surface-raised-base-hover": group.alternate,
+                            }}
+                          >
                             {group.title}
                           </div>
                           <For each={group.models}>

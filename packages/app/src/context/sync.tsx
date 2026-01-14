@@ -161,13 +161,18 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             .sort((a, b) => a.id.localeCompare(b.id))
           const merge = input.merge ?? false
           const includeParts = input.parts ?? true
-          const current = store().message[sessionID]?.length ?? 0
+          const current = store().message[sessionID] ?? []
+          const currentIds = current.map((m) => m.id)
+          const nextIds = next.map((m) => m.id)
+          const idSet = new Set(nextIds)
+          const missing = currentIds.some((id) => !idSet.has(id))
+          const useMerge = merge || missing
 
           batch(() => {
-            if (merge) {
+            if (useMerge) {
               mergeMessages(setStore, sessionID, next)
             }
-            if (!merge) {
+            if (!useMerge) {
               setStore("message", sessionID, reconcile(next, { key: "id" }))
             }
 
@@ -181,7 +186,11 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               setMeta("parts", sessionID, false)
             }
 
-            const total = merge ? current + next.length : next.length
+            const total = merge
+              ? current.length + next.length
+              : useMerge
+                ? new Set([...currentIds, ...nextIds]).size
+                : next.length
             setMeta("limit", sessionID, total)
             setMeta("complete", sessionID, next.length < input.limit)
           })

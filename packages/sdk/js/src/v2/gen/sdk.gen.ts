@@ -50,6 +50,8 @@ import type {
   FindSymbolsResponses,
   FindTextResponses,
   FormatterStatusResponses,
+  GitBranchesResponses,
+  GitCommitsResponses,
   GlobalDisposeResponses,
   GlobalEventResponses,
   GlobalHealthResponses,
@@ -1424,6 +1426,57 @@ export class Vcs extends HeyApiClient {
   }
 }
 
+export class Git extends HeyApiClient {
+  /**
+   * List git branches
+   *
+   * Get a list of all local git branches in the current project.
+   */
+  public branches<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).get<GitBranchesResponses, unknown, ThrowOnError>({
+      url: "/git/branches",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List git commits
+   *
+   * Get a list of recent git commits in the current project.
+   */
+  public commits<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      limit?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "limit" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<GitCommitsResponses, unknown, ThrowOnError>({
+      url: "/git/commits",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Session extends HeyApiClient {
   /**
    * List sessions
@@ -1475,6 +1528,13 @@ export class Session extends HeyApiClient {
       mode?: {
         id: string
       }
+      agent?: string
+      model?: {
+        providerID: string
+        modelID: string
+      }
+      variant?: string | null
+      thinking?: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1490,6 +1550,10 @@ export class Session extends HeyApiClient {
             { in: "body", key: "useWorktree" },
             { in: "body", key: "worktreeCleanup" },
             { in: "body", key: "mode" },
+            { in: "body", key: "agent" },
+            { in: "body", key: "model" },
+            { in: "body", key: "variant" },
+            { in: "body", key: "thinking" },
           ],
         },
       ],
@@ -1603,6 +1667,13 @@ export class Session extends HeyApiClient {
       mode?: {
         id: string
       }
+      agent?: string
+      model?: {
+        providerID: string
+        modelID: string
+      }
+      variant?: string | null
+      thinking?: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1616,6 +1687,10 @@ export class Session extends HeyApiClient {
             { in: "body", key: "title" },
             { in: "body", key: "time" },
             { in: "body", key: "mode" },
+            { in: "body", key: "agent" },
+            { in: "body", key: "model" },
+            { in: "body", key: "variant" },
+            { in: "body", key: "thinking" },
           ],
         },
       ],
@@ -3631,6 +3706,8 @@ export class OpencodeClient extends HeyApiClient {
   worktree = new Worktree({ client: this.client })
 
   vcs = new Vcs({ client: this.client })
+
+  git = new Git({ client: this.client })
 
   session = new Session({ client: this.client })
 

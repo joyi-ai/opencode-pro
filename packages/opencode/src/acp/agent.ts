@@ -655,8 +655,22 @@ export namespace ACP {
 
     private async loadSessionMode(params: LoadSessionRequest) {
       const directory = params.cwd
-      const model = await defaultModel(this.config, directory)
       const sessionId = params.sessionId
+      const model = await defaultModel(this.config, directory)
+
+      const session = await this.sdk.session
+        .get(
+          {
+            sessionID: sessionId,
+            directory,
+          },
+          { throwOnError: true },
+        )
+        .then((x) => x.data)
+        .catch((err) => {
+          log.error("unexpected error when fetching session", { error: err })
+          return undefined
+        })
 
       const providers = await this.sdk.config.providers({ directory }).then((x) => x.data!.providers)
       const entries = providers.sort((a, b) => {
@@ -712,7 +726,27 @@ export namespace ACP {
         }))
 
       const defaultAgentName = await AgentModule.defaultAgent()
-      const currentModeId = availableModes.find((m) => m.name === defaultAgentName)?.id ?? availableModes[0].id
+      const fallbackModeId = availableModes.find((m) => m.name === defaultAgentName)?.id ?? availableModes[0].id
+      const sessionAgent = session?.agent
+      const currentModeId = sessionAgent
+        ? availableModes.find((item) => item.id === sessionAgent)?.id ?? fallbackModeId
+        : fallbackModeId
+      const currentModel = session?.model ?? model
+      const currentModelId = `${currentModel.providerID}/${currentModel.modelID}`
+      this.sessionManager.setMode(sessionId, currentModeId)
+      this.sessionManager.setModel(sessionId, currentModel)
+      if (session && (session.agent === undefined || session.model === undefined)) {
+        this.sdk.session
+          .update({
+            sessionID: sessionId,
+            directory,
+            agent: session.agent ?? currentModeId,
+            model: session.model ?? currentModel,
+          })
+          .catch((err) => {
+            log.error("failed to persist session metadata", { error: err })
+          })
+      }
 
       const mcpServers: Record<string, Config.Mcp> = {}
       for (const server of params.mcpServers) {
@@ -767,7 +801,7 @@ export namespace ACP {
       return {
         sessionId,
         models: {
-          currentModelId: `${model.providerID}/${model.modelID}`,
+          currentModelId,
           availableModels,
         },
         modes: {
@@ -783,10 +817,20 @@ export namespace ACP {
 
       const model = Provider.parseModel(params.modelId)
 
-      this.sessionManager.setModel(session.id, {
+      const next = {
         providerID: model.providerID,
         modelID: model.modelID,
-      })
+      }
+      this.sessionManager.setModel(session.id, next)
+      this.sdk.session
+        .update({
+          sessionID: session.id,
+          directory: session.cwd,
+          model: next,
+        })
+        .catch((err) => {
+          log.error("failed to persist session model", { error: err })
+        })
 
       return {
         _meta: {},
@@ -794,7 +838,7 @@ export namespace ACP {
     }
 
     async setSessionMode(params: SetSessionModeRequest): Promise<SetSessionModeResponse | void> {
-      this.sessionManager.get(params.sessionId)
+      const session = this.sessionManager.get(params.sessionId)
       await this.config.sdk.app
         .agents({}, { throwOnError: true })
         .then((x) => x.data)
@@ -802,6 +846,15 @@ export namespace ACP {
           if (!agent) throw new Error(`Agent not found: ${params.modeId}`)
         })
       this.sessionManager.setMode(params.sessionId, params.modeId)
+      this.sdk.session
+        .update({
+          sessionID: params.sessionId,
+          directory: session.cwd,
+          agent: params.modeId,
+        })
+        .catch((err) => {
+          log.error("failed to persist session agent", { error: err })
+        })
     }
 
     async prompt(params: PromptRequest) {
