@@ -477,7 +477,7 @@ export namespace Session {
         limit: input.limit,
         afterID: input.afterID,
       })
-      return page.map((item) => {
+      const messages = page.map((item) => {
         const info = item.info as MessageV2.Info
         const cached = MessageV2.PartStore.peekParts(info.sessionID, info.id)
         if (cached) {
@@ -491,6 +491,8 @@ export namespace Session {
           parts: item.parts as MessageV2.Part[],
         }
       })
+      messages.sort((a, b) => a.info.id.localeCompare(b.info.id))
+      return messages
     },
   )
 
