@@ -87,6 +87,22 @@ export function HomeContent(props: HomeContentProps) {
       .slice(0, 5),
   )
 
+  // Find the selected project in sync data (if it exists)
+  const selectedProjectData = createMemo(() => {
+    const selected = selectedProject()
+    if (!selected) return undefined
+    return sync.data.project.find((p) => p.worktree === selected)
+  })
+
+  // Recent projects: exclude selected, limit to 4
+  const recentProjects = createMemo(() => {
+    const selected = selectedProject()
+    return sync.data.project
+      .filter((p) => p.worktree !== selected)
+      .toSorted((a, b) => (b.time.updated ?? b.time.created) - (a.time.updated ?? a.time.created))
+      .slice(0, 4)
+  })
+
   const maxWidth = () => (props.variant === "page" ? "max-w-xl" : "max-w-md")
   const logoWidth = () => (props.variant === "page" ? "w-xl" : "w-48")
   const marginTop = () => (props.variant === "page" ? "mt-20" : "mt-12")
@@ -134,10 +150,10 @@ export function HomeContent(props: HomeContentProps) {
                     {server.name}
                   </Button>
                   <Switch>
-                    <Match when={projects().length > 0}>
+                    <Match when={projects().length > 0 || selectedProject()}>
                       <div class={`${marginTop()} w-full flex flex-col gap-4`}>
                         <div class="flex gap-2 items-center justify-between pl-3">
-                          <div class="text-14-medium text-text-strong">Recent projects</div>
+                          <div class="text-14-medium text-text-strong">Selected project</div>
                           <div class="flex gap-2">
                             <Button icon="folder-add-left" size="normal" class="pl-2 pr-3" onClick={chooseProject}>
                               Open project
@@ -154,35 +170,52 @@ export function HomeContent(props: HomeContentProps) {
                             </Show>
                           </div>
                         </div>
-                        <ul class="flex flex-col gap-2">
-                          <For each={projects()}>
-                            {(project) => {
-                              const isSelected = () => project.worktree === selectedProject()
-                              return (
+                        <Show when={selectedProject()}>
+                          <Button
+                            size="large"
+                            variant="secondary"
+                            class="text-14-mono text-left justify-between px-3"
+                            onClick={() => selectProject(selectedProject()!)}
+                          >
+                            <span class="truncate text-text-accent-base">
+                              {selectedProject()!.replace(homedir(), "~")}
+                            </span>
+                            <Show when={selectedProjectData()}>
+                              <span class="text-14-regular text-text-weak">
+                                {DateTime.fromMillis(
+                                  selectedProjectData()!.time.updated ?? selectedProjectData()!.time.created,
+                                ).toRelative()}
+                              </span>
+                            </Show>
+                          </Button>
+                        </Show>
+                        <Show when={!selectedProject()}>
+                          <div class="text-14-mono text-text-weak px-3">No project selected</div>
+                        </Show>
+                        <Show when={recentProjects().length > 0}>
+                          <div class="flex gap-2 items-center pl-3 pt-2">
+                            <div class="text-14-medium text-text-strong">Recent projects</div>
+                          </div>
+                          <ul class="flex flex-col gap-2">
+                            <For each={recentProjects()}>
+                              {(project) => (
                                 <Button
                                   size="large"
-                                  variant={isSelected() ? "secondary" : "ghost"}
+                                  variant="ghost"
                                   class="text-14-mono text-left justify-between px-3"
                                   onClick={() => selectProject(project.worktree)}
                                 >
-                                  <span class="truncate" classList={{ "text-text-accent-base": isSelected() }}>
-                                    {project.worktree.replace(homedir(), "~")}
-                                  </span>
-                                  <Show when={isSelected()}>
-                                    <span class="text-11-regular text-text-accent-base shrink-0 ml-2">selected</span>
-                                  </Show>
-                                  <Show when={!isSelected()}>
-                                    <Show when={showRelativeTime()}>
-                                      <span class="text-14-regular text-text-weak">
-                                        {DateTime.fromMillis(project.time.updated ?? project.time.created).toRelative()}
-                                      </span>
-                                    </Show>
+                                  <span class="truncate">{project.worktree.replace(homedir(), "~")}</span>
+                                  <Show when={showRelativeTime()}>
+                                    <span class="text-14-regular text-text-weak">
+                                      {DateTime.fromMillis(project.time.updated ?? project.time.created).toRelative()}
+                                    </span>
                                   </Show>
                                 </Button>
-                              )
-                            }}
-                          </For>
-                        </ul>
+                              )}
+                            </For>
+                          </ul>
+                        </Show>
                       </div>
                     </Match>
                     <Match when={true}>
