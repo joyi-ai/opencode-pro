@@ -86,6 +86,7 @@ function PaneSyncedProviders(props: { paneId: string; directory: string; childre
       onAskUserRespond={respondToAskUser}
       onPlanModeRespond={respondToPlanMode}
       onSetAgent={(name) => setAgentFn?.(name)}
+      onReasoningPrefetch={(input) => sync.session.prefetchReasoning(input.sessionID, input.messageID)}
     >
       <LocalProvider>
         <AgentBridge setAgentRef={(fn) => (setAgentFn = fn)}>
@@ -145,6 +146,7 @@ function GlobalPromptSynced(props: { paneId: string; directory: string; sessionI
       onAskUserRespond={respondToAskUser}
       onPlanModeRespond={respondToPlanMode}
       onSetAgent={(name) => setAgentFn?.(name)}
+      onReasoningPrefetch={(input) => sync.session.prefetchReasoning(input.sessionID, input.messageID)}
     >
       <LocalProvider>
         <AgentBridge setAgentRef={(fn) => (setAgentFn = fn)}>

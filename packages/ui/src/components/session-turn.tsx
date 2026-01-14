@@ -741,6 +741,21 @@ export function SessionTurn(
 
   const responsePartId = createMemo(() => lastTextPart()?.id)
 
+  const reasoningTargets = createMemo(() => {
+    const result: string[] = []
+    for (const msg of assistantMessages()) {
+      const parts = data.store.part[msg.id] ?? emptyParts
+      const hasPart = parts.some((part) => part?.type === "reasoning")
+      const hasFlag = (msg as AssistantMessage & { hasReasoning?: boolean }).hasReasoning
+      if (hasPart || hasFlag) {
+        result.push(msg.id)
+      }
+    }
+    return result
+  })
+
+  const hasReasoning = createMemo(() => reasoningTargets().length > 0)
+
   const reasoning = createMemo(() => {
     const texts: string[] = []
 
@@ -835,6 +850,26 @@ export function SessionTurn(
     if (start > 0) return `…${tail.trimStart()}`
 
     return tail
+  })
+
+  const reasoningMissing = createMemo(() => hasReasoning() && !reasoning())
+
+  const requestReasoning = () => {
+    if (!reasoningMissing()) return
+    const prefetch = data.prefetchReasoning
+    if (!prefetch) return
+    setStore("reasoningLoading", true)
+    for (const id of reasoningTargets()) {
+      const parts = data.store.part[id] ?? emptyParts
+      if (parts.some((part) => part?.type === "reasoning")) continue
+      prefetch({ sessionID: props.sessionID, messageID: id })
+    }
+  }
+
+  createEffect(() => {
+    if (reasoningMissing()) return
+    if (!store.reasoningLoading) return
+    setStore("reasoningLoading", false)
   })
 
   const commentary = createMemo(() => {
@@ -1057,6 +1092,7 @@ export function SessionTurn(
     duration: duration(),
 
     reasoningExpanded: false,
+    reasoningLoading: false,
   })
 
   createEffect(
@@ -1069,6 +1105,7 @@ export function SessionTurn(
         setStore("diffLimit", diffInit)
 
         setStore("reasoningExpanded", false)
+        setStore("reasoningLoading", false)
       },
 
       { defer: true },
@@ -1080,7 +1117,10 @@ export function SessionTurn(
       working,
 
       (next, prev) => {
-        if (prev === true && next === false) setStore("reasoningExpanded", false)
+        if (prev === true && next === false) {
+          setStore("reasoningExpanded", false)
+          setStore("reasoningLoading", false)
+        }
       },
 
       { defer: true },
@@ -1244,10 +1284,7 @@ export function SessionTurn(
                           <div data-slot="session-turn-task-agents">
                             <Index each={taskAgents()}>
                               {(agent) => (
-                                <div
-                                  data-slot="session-turn-task-agent"
-                                  data-done={agent().done ? "true" : "false"}
-                                >
+                                <div data-slot="session-turn-task-agent" data-done={agent().done ? "true" : "false"}>
                                   <span data-slot="session-turn-task-agent-text">
                                     {agent().name}: {agent().status}
                                   </span>
@@ -1265,24 +1302,39 @@ export function SessionTurn(
                               {(text) => <div data-slot="session-turn-commentary">{text()}</div>}
                             </Show>
 
-                            <Show when={reasoning()}>
-                              {(text) => (
-                                <div data-slot="session-turn-reasoning-section">
-                                  <Show when={!working()}>
-                                    <button
-                                      type="button"
-                                      data-slot="session-turn-reasoning-trigger"
-                                      onClick={() => setStore("reasoningExpanded", (x) => !x)}
-                                    >
-                                      Reasoning
-                                    </button>
-                                  </Show>
+                            <Show when={hasReasoning()}>
+                              <div data-slot="session-turn-reasoning-section">
+                                <Show when={!working()}>
+                                  <button
+                                    type="button"
+                                    data-slot="session-turn-reasoning-trigger"
+                                    onMouseEnter={requestReasoning}
+                                    onFocus={requestReasoning}
+                                    onClick={() => {
+                                      requestReasoning()
+                                      setStore("reasoningExpanded", (x) => !x)
+                                    }}
+                                  >
+                                    Reasoning
+                                  </button>
+                                </Show>
 
-                                  <Show when={working() || store.reasoningExpanded}>
-                                    <div data-slot="session-turn-reasoning">{text()}</div>
+                                <Show when={working() || store.reasoningExpanded}>
+                                  <Show
+                                    when={reasoning()}
+                                    fallback={
+                                      <div data-slot="session-turn-reasoning">
+                                        <Show when={store.reasoningLoading}>
+                                          <Spinner />
+                                        </Show>
+                                        <Show when={!store.reasoningLoading}>Loading reasoning…</Show>
+                                      </div>
+                                    }
+                                  >
+                                    {(text) => <div data-slot="session-turn-reasoning">{text()}</div>}
                                   </Show>
-                                </div>
-                              )}
+                                </Show>
+                              </div>
                             </Show>
 
                             <StepsContainer

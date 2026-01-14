@@ -1994,6 +1994,8 @@ export class Session extends HeyApiClient {
       limit?: number
       afterID?: string
       parts?: "true" | "false"
+      partTypes?: string
+      excludePartTypes?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -2007,6 +2009,8 @@ export class Session extends HeyApiClient {
             { in: "query", key: "limit" },
             { in: "query", key: "afterID" },
             { in: "query", key: "parts" },
+            { in: "query", key: "partTypes" },
+            { in: "query", key: "excludePartTypes" },
           ],
         },
       ],
@@ -2122,6 +2126,8 @@ export class Session extends HeyApiClient {
       sessionID: string
       messageID: string
       directory?: string
+      partTypes?: string
+      excludePartTypes?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -2133,6 +2139,8 @@ export class Session extends HeyApiClient {
             { in: "path", key: "sessionID" },
             { in: "path", key: "messageID" },
             { in: "query", key: "directory" },
+            { in: "query", key: "partTypes" },
+            { in: "query", key: "excludePartTypes" },
           ],
         },
       ],

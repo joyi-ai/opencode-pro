@@ -352,6 +352,7 @@ export namespace MessageV2 {
       created: z.number(),
       completed: z.number().optional(),
     }),
+    hasReasoning: z.boolean().optional(),
     error: z
       .discriminatedUnion("name", [
         AuthError.Schema,

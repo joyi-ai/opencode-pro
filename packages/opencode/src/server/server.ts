@@ -275,6 +275,32 @@ export namespace Server {
     }
   }
 
+  const messagePartTypes = new Set([
+    "text",
+    "reasoning",
+    "file",
+    "tool",
+    "step-start",
+    "step-finish",
+    "snapshot",
+    "patch",
+    "agent",
+    "retry",
+    "compaction",
+    "subtask",
+  ])
+
+  function parsePartList(value: string | undefined) {
+    if (!value) return
+    const items = value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+    const filtered = items.filter((item) => messagePartTypes.has(item))
+    if (filtered.length === 0) return
+    return filtered
+  }
+
   let _url: URL | undefined
   let _corsWhitelist: string[] = []
 
@@ -1019,7 +1045,11 @@ export namespace Server {
           validator(
             "query",
             z.object({
-              limit: z.coerce.number().optional().default(50).meta({ description: "Maximum number of commits to return" }),
+              limit: z.coerce
+                .number()
+                .optional()
+                .default(50)
+                .meta({ description: "Maximum number of commits to return" }),
             }),
           ),
           async (c) => {
@@ -1649,15 +1679,27 @@ export namespace Server {
                   if (value === "false") return false
                   return undefined
                 }),
+              partTypes: z
+                .string()
+                .optional()
+                .meta({ description: "Comma-separated list of part types to include (overrides excludePartTypes)." }),
+              excludePartTypes: z
+                .string()
+                .optional()
+                .meta({ description: "Comma-separated list of part types to exclude." }),
             }),
           ),
           async (c) => {
             const query = c.req.valid("query")
+            const partTypes = parsePartList(query.partTypes)
+            const excludePartTypes = partTypes ? undefined : parsePartList(query.excludePartTypes)
             const messages = await Session.messages({
               sessionID: c.req.valid("param").sessionID,
               limit: query.limit,
               afterID: query.afterID,
               parts: query.parts,
+              partTypes,
+              excludePartTypes,
             })
             return c.json(messages)
           },
@@ -1721,8 +1763,41 @@ export namespace Server {
               messageID: z.string().meta({ description: "Message ID" }),
             }),
           ),
+          validator(
+            "query",
+            z.object({
+              partTypes: z
+                .string()
+                .optional()
+                .meta({ description: "Comma-separated list of part types to include (overrides excludePartTypes)." }),
+              excludePartTypes: z
+                .string()
+                .optional()
+                .meta({ description: "Comma-separated list of part types to exclude." }),
+            }),
+          ),
           async (c) => {
             const params = c.req.valid("param")
+            const query = c.req.valid("query")
+            const partTypes = parsePartList(query.partTypes)
+            const excludePartTypes = partTypes ? undefined : parsePartList(query.excludePartTypes)
+            if (partTypes || excludePartTypes) {
+              const info = StorageSqlite.readMessageInfo(params.sessionID, params.messageID)
+              if (!info) {
+                throw new Storage.NotFoundError({ message: `Message ${params.messageID} not found` })
+              }
+              const parts = StorageSqlite.readPartsFiltered(params.sessionID, params.messageID, {
+                partTypes,
+                excludePartTypes,
+              }) as MessageV2.Part[]
+              const hasReasoning =
+                info.role === "assistant"
+                  ? StorageSqlite.messageHasPartType(params.sessionID, params.messageID, "reasoning")
+                  : undefined
+              const nextInfo =
+                info.role === "assistant" ? ({ ...info, hasReasoning } as MessageV2.Info) : (info as MessageV2.Info)
+              return c.json({ info: nextInfo, parts })
+            }
             const message = await MessageV2.get({
               sessionID: params.sessionID,
               messageID: params.messageID,

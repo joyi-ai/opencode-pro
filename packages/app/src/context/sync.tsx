@@ -22,10 +22,12 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     }) as SetStoreFunction<ChildStore>
     const absolute = (path: string) => (store().path.directory + "/" + path).replace("//", "/")
     const chunk = 50
+    const initialHistoryLimit = 6
     const inflight = new Map<string, Promise<void>>()
     const inflightDiff = new Map<string, Promise<void>>()
     const inflightTodo = new Map<string, Promise<void>>()
     const inflightParts = new Map<string, Promise<void>>()
+    const inflightReasoning = new Map<string, Promise<void>>()
     const partLimit = 50
     const partOrder = new Map<string, string[]>()
     const [meta, setMeta] = createStore({
@@ -101,12 +103,40 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       )
     }
 
-    const mergeParts = (setTarget: SetState, sessionID: string, messageID: string, parts: Part[]) => {
+    const mergeParts = (
+      setTarget: SetState,
+      sessionID: string,
+      messageID: string,
+      parts: Part[],
+      options?: { merge?: boolean },
+    ) => {
       const sorted = parts
         .filter((p) => !!p?.id)
         .slice()
         .sort((a, b) => a.id.localeCompare(b.id))
       if (sorted.length === 0) return
+      if (options?.merge) {
+        setTarget(
+          "part",
+          produce((draft) => {
+            const current = draft[messageID] ?? []
+            if (current.length === 0) {
+              draft[messageID] = sorted.slice()
+              return
+            }
+            for (const part of sorted) {
+              const result = Binary.search(current, part.id, (p) => p.id)
+              if (result.found) {
+                current[result.index] = part
+                continue
+              }
+              current.splice(result.index, 0, part)
+            }
+          }),
+        )
+        recordParts(setTarget, sessionID, messageID)
+        return
+      }
       setTarget("part", messageID, reconcile(sorted, { key: "id" }))
       recordParts(setTarget, sessionID, messageID)
     }
@@ -140,6 +170,8 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       afterID?: string
       merge?: boolean
       parts?: boolean
+      partTypes?: string[]
+      excludePartTypes?: string[]
     }) => {
       const sessionID = input.sessionID
       if (meta.loading[sessionID]) return
@@ -150,6 +182,13 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           sessionID,
           limit: input.limit,
           afterID: input.afterID,
+          partTypes: input.parts === false ? undefined : input.partTypes?.join(","),
+          excludePartTypes:
+            input.parts === false
+              ? undefined
+              : input.partTypes && input.partTypes.length > 0
+                ? undefined
+                : (input.excludePartTypes ?? ["reasoning"]).join(","),
         }),
       )
         .then((messages) => {
@@ -288,7 +327,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           const pending = inflight.get(sessionID)
           if (pending) return pending
 
-          const limit = meta.limit[sessionID] ?? chunk
+          const limit = meta.limit[sessionID] ?? initialHistoryLimit
 
           const sessionReq = hasSession
             ? Promise.resolve()
@@ -331,17 +370,48 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           const key = `${sessionID}:${messageID}`
           const pending = inflightParts.get(key)
           if (pending) return pending
-          const promise = retry(() => sdk.client.session.message({ sessionID, messageID }))
+          const promise = retry(() =>
+            sdk.client.session.message({
+              sessionID,
+              messageID,
+              excludePartTypes: "reasoning",
+            }),
+          )
             .then((message) => {
               const data = message.data
               if (!data?.info?.id) return
               mergeMessages(setStore, sessionID, [data.info])
-              mergeParts(setStore, sessionID, data.info.id, data.parts ?? [])
+              mergeParts(setStore, sessionID, data.info.id, data.parts ?? [], { merge: true })
             })
             .finally(() => {
               inflightParts.delete(key)
             })
           inflightParts.set(key, promise)
+          return promise
+        },
+        async prefetchReasoning(sessionID: string, messageID: string) {
+          const existing = store().part[messageID]
+          if (existing?.some((part) => part.type === "reasoning")) return
+          const key = `${sessionID}:${messageID}`
+          const pending = inflightReasoning.get(key)
+          if (pending) return pending
+          const promise = retry(() =>
+            sdk.client.session.message({
+              sessionID,
+              messageID,
+              partTypes: "reasoning",
+            }),
+          )
+            .then((message) => {
+              const data = message.data
+              if (!data?.info?.id) return
+              mergeMessages(setStore, sessionID, [data.info])
+              mergeParts(setStore, sessionID, data.info.id, data.parts ?? [], { merge: true })
+            })
+            .finally(() => {
+              inflightReasoning.delete(key)
+            })
+          inflightReasoning.set(key, promise)
           return promise
         },
         async diff(sessionID: string) {

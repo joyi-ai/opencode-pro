@@ -57,6 +57,8 @@ export type PlanModeRespondFn = (input: { requestID: string; approved: boolean }
 
 export type SetAgentFn = (name: string) => void
 
+export type PrefetchReasoningFn = (input: { sessionID: string; messageID: string }) => Promise<unknown> | void
+
 export const { use: useData, provider: DataProvider } = createSimpleContext({
   name: "Data",
   init: (props: {
@@ -67,6 +69,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     onAskUserRespond?: AskUserRespondFn
     onPlanModeRespond?: PlanModeRespondFn
     onSetAgent?: SetAgentFn
+    onReasoningPrefetch?: PrefetchReasoningFn
   }) => {
     return {
       get store() {
@@ -80,6 +83,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       respondToAskUser: props.onAskUserRespond,
       respondToPlanMode: props.onPlanModeRespond,
       setAgent: props.onSetAgent,
+      prefetchReasoning: props.onReasoningPrefetch,
     }
   },
 })

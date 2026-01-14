@@ -61,17 +61,26 @@ export namespace StorageSqlite {
 
   export type PartRecord = {
     id: string
+    type?: string
   } & Record<string, unknown>
 
   export type MessageWithParts = {
     info: MessageRecord["info"]
     parts: PartRecord[]
+    hasReasoning?: boolean
   }
 
   export type MessageListInput = {
     sessionID: string
     limit?: number
     afterID?: string
+    partTypes?: string[]
+    excludePartTypes?: string[]
+  }
+
+  export type PartFilterInput = {
+    partTypes?: string[]
+    excludePartTypes?: string[]
   }
 
   const SCHEMA = `
@@ -131,6 +140,7 @@ export namespace StorageSqlite {
       sessionID TEXT NOT NULL,
       messageID TEXT NOT NULL,
       id TEXT NOT NULL,
+      type TEXT,
       data TEXT NOT NULL,
       PRIMARY KEY (sessionID, messageID, id)
     );
@@ -356,19 +366,20 @@ export namespace StorageSqlite {
     const suffix = limit !== undefined ? " LIMIT ?" : ""
     if (limit !== undefined) params.push(limit)
 
-    const sql = `SELECT * FROM session_index WHERE ${clauses.join(
-      " AND ",
-    )} ORDER BY updated_at DESC, id DESC${suffix}`
+    const sql = `SELECT * FROM session_index WHERE ${clauses.join(" AND ")} ORDER BY updated_at DESC, id DESC${suffix}`
 
-    return db().query<SessionIndexRecord, (string | number | null)[]>(sql).all(...params)
+    return db()
+      .query<SessionIndexRecord, (string | number | null)[]>(sql)
+      .all(...params)
   }
 
   export function listSessionIndexChildren(parentID: string) {
     ensureSessionIndex()
     return db()
-      .query<SessionIndexRecord, [string]>(
-        "SELECT * FROM session_index WHERE parentID = ? ORDER BY updated_at DESC, id DESC",
-      )
+      .query<
+        SessionIndexRecord,
+        [string]
+      >("SELECT * FROM session_index WHERE parentID = ? ORDER BY updated_at DESC, id DESC")
       .all(parentID)
   }
 
@@ -381,6 +392,79 @@ export namespace StorageSqlite {
       writeSessionIndex(session)
     }
     metaSet("session-index-seeded", "1")
+  }
+
+  function normalizePartTypes(input: string[] | undefined) {
+    if (!input) return []
+    return input.map((value) => value.trim()).filter(Boolean)
+  }
+
+  function typeFilter(column: string, include: string[], exclude: string[]) {
+    if (include.length > 0) {
+      const placeholders = include.map(() => "?").join(", ")
+      return {
+        sql: ` AND ${column} IN (${placeholders})`,
+        params: include,
+      }
+    }
+    if (exclude.length > 0) {
+      const placeholders = exclude.map(() => "?").join(", ")
+      return {
+        sql: ` AND ${column} NOT IN (${placeholders})`,
+        params: exclude,
+      }
+    }
+    return { sql: "", params: [] as string[] }
+  }
+
+  function messagePartsHasTypeColumn() {
+    const rows = db().query<{ name: string }, []>("PRAGMA table_info(message_parts)").all()
+    return rows.some((row) => row.name === "type")
+  }
+
+  function ensureMessagePartTypeColumn() {
+    if (messagePartsHasTypeColumn()) return
+    db().run("ALTER TABLE message_parts ADD COLUMN type TEXT")
+  }
+
+  function partTypeFromData(data: string) {
+    const parsed = JSON.parse(data) as { type?: unknown }
+    if (!parsed || typeof parsed !== "object") return
+    const value = parsed.type
+    if (typeof value !== "string") return
+    return value
+  }
+
+  export function ensureMessagePartTypes() {
+    ensureMessagePartTypeColumn()
+    db().run(
+      "CREATE INDEX IF NOT EXISTS idx_message_parts_message_id_type ON message_parts(sessionID, messageID, type)",
+    )
+    const seeded = metaGet("message-part-types-seeded")
+    if (seeded) return
+    const rows = db()
+      .query<
+        { sessionID: string; messageID: string; id: string; data: string },
+        []
+      >("SELECT sessionID, messageID, id, data FROM message_parts WHERE type IS NULL OR type = ''")
+      .all()
+    if (rows.length === 0) {
+      metaSet("message-part-types-seeded", "1")
+      return
+    }
+    const tx = db().transaction((items: { sessionID: string; messageID: string; id: string; data: string }[]) => {
+      for (const item of items) {
+        const value = partTypeFromData(item.data) ?? null
+        db().run("UPDATE message_parts SET type = ? WHERE sessionID = ? AND messageID = ? AND id = ?", [
+          value,
+          item.sessionID,
+          item.messageID,
+          item.id,
+        ])
+      }
+    })
+    tx(rows)
+    metaSet("message-part-types-seeded", "1")
   }
 
   function messageInfoFromData(data: string) {
@@ -400,6 +484,25 @@ export namespace StorageSqlite {
       .get(sessionID, messageID)
     if (!row) return
     return JSON.parse(row.data)
+  }
+
+  export function readMessageInfo(sessionID: string, messageID: string) {
+    const row = db()
+      .query<{ data: string }, [string, string]>("SELECT data FROM messages WHERE sessionID = ? AND id = ?")
+      .get(sessionID, messageID)
+    if (!row) return
+    return messageInfoFromData(row.data)
+  }
+
+  export function messageHasPartType(sessionID: string, messageID: string, type: string) {
+    ensureMessagePartTypes()
+    const row = db()
+      .query<
+        { value: number },
+        [string, string, string]
+      >("SELECT EXISTS(SELECT 1 FROM message_parts WHERE sessionID = ? AND messageID = ? AND type = ?) as value")
+      .get(sessionID, messageID, type)
+    return row?.value === 1
   }
 
   export function writeMessage(input: MessageRecord) {
@@ -431,14 +534,30 @@ export namespace StorageSqlite {
     return rows.map((row) => JSON.parse(row.data))
   }
 
+  export function readPartsFiltered(sessionID: string, messageID: string, input?: PartFilterInput) {
+    ensureMessagePartTypes()
+    const include = normalizePartTypes(input?.partTypes)
+    const exclude = normalizePartTypes(input?.excludePartTypes)
+    const filter = typeFilter("type", include, exclude)
+    const rows = db()
+      .query<{ data: string }, (string | null)[]>(
+        `SELECT data FROM message_parts WHERE sessionID = ? AND messageID = ?${filter.sql} ORDER BY id ASC`,
+      )
+      .all(sessionID, messageID, ...filter.params)
+    return rows.map((row) => JSON.parse(row.data))
+  }
+
   export function writeParts(sessionID: string, messageID: string, parts: PartRecord[]) {
     if (parts.length === 0) return
+    ensureMessagePartTypeColumn()
     const tx = db().transaction((rows: PartRecord[]) => {
       for (const part of rows) {
-        db().run("INSERT OR REPLACE INTO message_parts (sessionID, messageID, id, data) VALUES (?, ?, ?, ?)", [
+        const value = typeof part.type === "string" ? part.type : null
+        db().run("INSERT OR REPLACE INTO message_parts (sessionID, messageID, id, type, data) VALUES (?, ?, ?, ?, ?)", [
           sessionID,
           messageID,
           part.id,
+          value,
           JSON.stringify(part),
         ])
       }
@@ -498,29 +617,35 @@ export namespace StorageSqlite {
   }
 
   export function listMessagesInfoPage(input: MessageListInput) {
+    ensureMessagePartTypes()
     const afterID = input.afterID
     const limit = input.limit
 
-    const parseRows = (rows: Array<{ data: string }>) => {
+    const parseRows = (rows: Array<{ data: string; has_reasoning: number }>) => {
       const items: MessageWithParts[] = []
       for (const row of rows) {
         const info = messageInfoFromData(row.data)
         if (!info) continue
-        items.push({ info, parts: [] })
+        const hasReasoning = row.has_reasoning === 1
+        items.push({ info, parts: [], hasReasoning })
       }
       return items
     }
 
     if (afterID && limit !== undefined) {
       const rows = db()
-        .query<{ data: string }, [string, string, string, number]>(
+        .query<{ data: string; has_reasoning: number }, [string, string, string, number]>(
           `
-          SELECT data
-          FROM messages
-          WHERE sessionID = ? AND id IN (
+          SELECT m.data as data,
+                 EXISTS(
+                   SELECT 1 FROM message_parts p
+                   WHERE p.sessionID = m.sessionID AND p.messageID = m.id AND p.type = 'reasoning'
+                 ) as has_reasoning
+          FROM messages m
+          WHERE m.sessionID = ? AND m.id IN (
             SELECT id FROM messages WHERE sessionID = ? AND id < ? ORDER BY id DESC LIMIT ?
           )
-          ORDER BY id DESC
+          ORDER BY m.id DESC
           `,
         )
         .all(input.sessionID, input.sessionID, afterID, limit)
@@ -529,14 +654,18 @@ export namespace StorageSqlite {
 
     if (afterID) {
       const rows = db()
-        .query<{ data: string }, [string, string, string]>(
+        .query<{ data: string; has_reasoning: number }, [string, string, string]>(
           `
-          SELECT data
-          FROM messages
-          WHERE sessionID = ? AND id IN (
+          SELECT m.data as data,
+                 EXISTS(
+                   SELECT 1 FROM message_parts p
+                   WHERE p.sessionID = m.sessionID AND p.messageID = m.id AND p.type = 'reasoning'
+                 ) as has_reasoning
+          FROM messages m
+          WHERE m.sessionID = ? AND m.id IN (
             SELECT id FROM messages WHERE sessionID = ? AND id < ? ORDER BY id DESC
           )
-          ORDER BY id DESC
+          ORDER BY m.id DESC
           `,
         )
         .all(input.sessionID, input.sessionID, afterID)
@@ -545,14 +674,18 @@ export namespace StorageSqlite {
 
     if (limit !== undefined) {
       const rows = db()
-        .query<{ data: string }, [string, string, number]>(
+        .query<{ data: string; has_reasoning: number }, [string, string, number]>(
           `
-          SELECT data
-          FROM messages
-          WHERE sessionID = ? AND id IN (
+          SELECT m.data as data,
+                 EXISTS(
+                   SELECT 1 FROM message_parts p
+                   WHERE p.sessionID = m.sessionID AND p.messageID = m.id AND p.type = 'reasoning'
+                 ) as has_reasoning
+          FROM messages m
+          WHERE m.sessionID = ? AND m.id IN (
             SELECT id FROM messages WHERE sessionID = ? ORDER BY id DESC LIMIT ?
           )
-          ORDER BY id DESC
+          ORDER BY m.id DESC
           `,
         )
         .all(input.sessionID, input.sessionID, limit)
@@ -560,16 +693,33 @@ export namespace StorageSqlite {
     }
 
     const rows = db()
-      .query<{ data: string }, [string]>("SELECT data FROM messages WHERE sessionID = ? ORDER BY id DESC")
+      .query<{ data: string; has_reasoning: number }, [string]>(
+        `
+        SELECT m.data as data,
+               EXISTS(
+                 SELECT 1 FROM message_parts p
+                 WHERE p.sessionID = m.sessionID AND p.messageID = m.id AND p.type = 'reasoning'
+               ) as has_reasoning
+        FROM messages m
+        WHERE m.sessionID = ? ORDER BY m.id DESC
+        `,
+      )
       .all(input.sessionID)
     return parseRows(rows)
   }
 
   export function listMessagesWithPartsPage(input: MessageListInput) {
+    ensureMessagePartTypes()
     const afterID = input.afterID
     const limit = input.limit
+    const include = normalizePartTypes(input.partTypes)
+    const exclude = normalizePartTypes(input.excludePartTypes)
+    const filter = typeFilter("p.type", include, exclude)
+    const params = (base: (string | number)[]) => (filter.params.length > 0 ? [...filter.params, ...base] : base)
 
-    const groupRows = (rows: Array<{ messageID: string; message: string; part: string | null }>) => {
+    const groupRows = (
+      rows: Array<{ messageID: string; message: string; part: string | null; has_reasoning: number }>,
+    ) => {
       const result: MessageWithParts[] = []
       const current = { value: undefined as MessageWithParts | undefined }
       for (const row of rows) {
@@ -577,7 +727,7 @@ export namespace StorageSqlite {
         if (!last || last.info.id !== row.messageID) {
           const parsed = JSON.parse(row.message) as { info?: MessageRecord["info"] }
           const info = parsed.info ?? (parsed as MessageRecord["info"])
-          const entry = { info, parts: [] as PartRecord[] }
+          const entry = { info, parts: [] as PartRecord[], hasReasoning: row.has_reasoning === 1 }
           result.push(entry)
           current.value = entry
         }
@@ -588,73 +738,105 @@ export namespace StorageSqlite {
     }
 
     if (afterID && limit !== undefined) {
+      const base = [input.sessionID, input.sessionID, afterID, limit]
       const rows = db()
-        .query<{ messageID: string; message: string; part: string | null }, [string, string, string, number]>(
+        .query<{ messageID: string; message: string; part: string | null; has_reasoning: number }, (string | number)[]>(
           `
-          SELECT m.id as messageID, m.data as message, p.data as part
+          SELECT m.id as messageID,
+                 m.data as message,
+                 p.data as part,
+                 EXISTS(
+                   SELECT 1 FROM message_parts pr
+                   WHERE pr.sessionID = m.sessionID AND pr.messageID = m.id AND pr.type = 'reasoning'
+                 ) as has_reasoning
           FROM messages m
           LEFT JOIN message_parts p
             ON p.sessionID = m.sessionID AND p.messageID = m.id
+            ${filter.sql}
           WHERE m.sessionID = ? AND m.id IN (
             SELECT id FROM messages WHERE sessionID = ? AND id < ? ORDER BY id DESC LIMIT ?
           )
           ORDER BY m.id DESC, p.id ASC
           `,
         )
-        .all(input.sessionID, input.sessionID, afterID, limit)
+        .all(...params(base))
       return groupRows(rows)
     }
 
     if (afterID) {
+      const base = [input.sessionID, input.sessionID, afterID]
       const rows = db()
-        .query<{ messageID: string; message: string; part: string | null }, [string, string, string]>(
+        .query<{ messageID: string; message: string; part: string | null; has_reasoning: number }, (string | number)[]>(
           `
-          SELECT m.id as messageID, m.data as message, p.data as part
+          SELECT m.id as messageID,
+                 m.data as message,
+                 p.data as part,
+                 EXISTS(
+                   SELECT 1 FROM message_parts pr
+                   WHERE pr.sessionID = m.sessionID AND pr.messageID = m.id AND pr.type = 'reasoning'
+                 ) as has_reasoning
           FROM messages m
           LEFT JOIN message_parts p
             ON p.sessionID = m.sessionID AND p.messageID = m.id
+            ${filter.sql}
           WHERE m.sessionID = ? AND m.id IN (
             SELECT id FROM messages WHERE sessionID = ? AND id < ? ORDER BY id DESC
           )
           ORDER BY m.id DESC, p.id ASC
           `,
         )
-        .all(input.sessionID, input.sessionID, afterID)
+        .all(...params(base))
       return groupRows(rows)
     }
 
     if (limit !== undefined) {
+      const base = [input.sessionID, input.sessionID, limit]
       const rows = db()
-        .query<{ messageID: string; message: string; part: string | null }, [string, string, number]>(
+        .query<{ messageID: string; message: string; part: string | null; has_reasoning: number }, (string | number)[]>(
           `
-          SELECT m.id as messageID, m.data as message, p.data as part
+          SELECT m.id as messageID,
+                 m.data as message,
+                 p.data as part,
+                 EXISTS(
+                   SELECT 1 FROM message_parts pr
+                   WHERE pr.sessionID = m.sessionID AND pr.messageID = m.id AND pr.type = 'reasoning'
+                 ) as has_reasoning
           FROM messages m
           LEFT JOIN message_parts p
             ON p.sessionID = m.sessionID AND p.messageID = m.id
+            ${filter.sql}
           WHERE m.sessionID = ? AND m.id IN (
             SELECT id FROM messages WHERE sessionID = ? ORDER BY id DESC LIMIT ?
           )
           ORDER BY m.id DESC, p.id ASC
           `,
         )
-        .all(input.sessionID, input.sessionID, limit)
+        .all(...params(base))
       return groupRows(rows)
     }
 
+    const base = [input.sessionID, input.sessionID]
     const rows = db()
-      .query<{ messageID: string; message: string; part: string | null }, [string, string]>(
+      .query<{ messageID: string; message: string; part: string | null; has_reasoning: number }, (string | number)[]>(
         `
-        SELECT m.id as messageID, m.data as message, p.data as part
+        SELECT m.id as messageID,
+               m.data as message,
+               p.data as part,
+               EXISTS(
+                 SELECT 1 FROM message_parts pr
+                 WHERE pr.sessionID = m.sessionID AND pr.messageID = m.id AND pr.type = 'reasoning'
+               ) as has_reasoning
         FROM messages m
         LEFT JOIN message_parts p
           ON p.sessionID = m.sessionID AND p.messageID = m.id
+          ${filter.sql}
         WHERE m.sessionID = ? AND m.id IN (
           SELECT id FROM messages WHERE sessionID = ? ORDER BY id DESC
         )
         ORDER BY m.id DESC, p.id ASC
         `,
       )
-      .all(input.sessionID, input.sessionID)
+      .all(...params(base))
     return groupRows(rows)
   }
 

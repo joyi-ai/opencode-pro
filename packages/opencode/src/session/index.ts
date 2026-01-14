@@ -474,9 +474,18 @@ export namespace Session {
       limit: z.number().optional(),
       afterID: Identifier.schema("message").optional(), // Only load messages older than this ID
       parts: z.boolean().optional(),
+      partTypes: z.string().array().optional(),
+      excludePartTypes: z.string().array().optional(),
     }),
     async (input) => {
       const includeParts = input.parts !== false
+      const include = input.partTypes ?? []
+      const exclude = input.excludePartTypes ?? []
+      const filterParts = (items: MessageV2.Part[]) => {
+        if (include.length > 0) return items.filter((part) => include.includes(part.type))
+        if (exclude.length > 0) return items.filter((part) => !exclude.includes(part.type))
+        return items
+      }
       if (!includeParts) {
         const page = StorageSqlite.listMessagesInfoPage({
           sessionID: input.sessionID,
@@ -484,7 +493,10 @@ export namespace Session {
           afterID: input.afterID,
         })
         const messages = page.map((item) => ({
-          info: item.info as MessageV2.Info,
+          info:
+            item.info.role === "assistant"
+              ? ({ ...item.info, hasReasoning: item.hasReasoning } as MessageV2.Info)
+              : (item.info as MessageV2.Info),
           parts: item.parts as MessageV2.Part[],
         }))
         messages.sort((a, b) => a.info.id.localeCompare(b.info.id))
@@ -494,19 +506,24 @@ export namespace Session {
         sessionID: input.sessionID,
         limit: input.limit,
         afterID: input.afterID,
+        partTypes: include,
+        excludePartTypes: exclude,
       })
       const messages = page.map((item) => {
-        const info = item.info as MessageV2.Info
+        const info =
+          item.info.role === "assistant"
+            ? ({ ...item.info, hasReasoning: item.hasReasoning } as MessageV2.Info)
+            : (item.info as MessageV2.Info)
         const cached = MessageV2.PartStore.peekParts(info.sessionID, info.id)
         if (cached) {
           return {
             info,
-            parts: cached,
+            parts: filterParts(cached),
           }
         }
         return {
           info,
-          parts: item.parts as MessageV2.Part[],
+          parts: filterParts(item.parts as MessageV2.Part[]),
         }
       })
       messages.sort((a, b) => a.info.id.localeCompare(b.info.id))

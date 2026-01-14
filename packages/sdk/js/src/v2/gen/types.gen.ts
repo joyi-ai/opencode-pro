@@ -149,6 +149,7 @@ export type AssistantMessage = {
     created: number
     completed?: number
   }
+  hasReasoning?: boolean
   error?: ProviderAuthError | UnknownError | MessageOutputLengthError | MessageAbortedError | ApiError
   parentID: string
   modelID: string
@@ -3884,6 +3885,14 @@ export type SessionMessagesData = {
     limit?: number
     afterID?: string
     parts?: "true" | "false"
+    /**
+     * Comma-separated list of part types to include (overrides excludePartTypes).
+     */
+    partTypes?: string
+    /**
+     * Comma-separated list of part types to exclude.
+     */
+    excludePartTypes?: string
   }
   url: "/session/{sessionID}/message"
 }
@@ -4015,6 +4024,14 @@ export type SessionMessageData = {
   }
   query?: {
     directory?: string
+    /**
+     * Comma-separated list of part types to include (overrides excludePartTypes).
+     */
+    partTypes?: string
+    /**
+     * Comma-separated list of part types to exclude.
+     */
+    excludePartTypes?: string
   }
   url: "/session/{sessionID}/message/{messageID}"
 }

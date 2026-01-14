@@ -71,6 +71,7 @@ export default function Layout(props: ParentProps) {
                 onAskUserRespond={respondToAskUser}
                 onPlanModeRespond={respondToPlanMode}
                 onSetAgent={(name) => setAgentFn?.(name)}
+                onReasoningPrefetch={(input) => sync.session.prefetchReasoning(input.sessionID, input.messageID)}
               >
                 <LocalProvider>
                   <AgentBridge setAgentRef={(fn) => (setAgentFn = fn)}>{props.children}</AgentBridge>

@@ -278,6 +278,7 @@ export namespace Storage {
     }
     await migrateToSqlite(dir)
     StorageSqlite.ensureSessionIndex()
+    StorageSqlite.ensureMessagePartTypes()
     return {
       dir,
     }
