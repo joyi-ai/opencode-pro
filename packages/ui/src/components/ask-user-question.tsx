@@ -279,9 +279,13 @@ export const AskUserQuestion: Component<AskUserQuestionProps> = (props) => {
           type="button"
           data-slot="ask-user-submit-btn"
           data-ready={hasSelections()}
+          data-submitting={isSubmitting()}
           onClick={handleSubmit}
           disabled={isSubmitting() || !hasSelections()}
         >
+          <Show when={isSubmitting()}>
+            <Spinner />
+          </Show>
           {isSubmitting() ? "Submitting..." : "Submit"}
         </button>
       </div>

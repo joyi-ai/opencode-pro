@@ -249,6 +249,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.375rem;
     padding: 0.375rem 0.75rem;
     border-radius: var(--radius-sm);
     background: transparent;
@@ -258,6 +259,11 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
+  }
+
+  [data-slot="ask-user-submit-btn"] [data-component="spinner"] {
+    width: 14px;
+    height: 14px;
   }
 
   [data-slot="ask-user-submit-btn"]:hover {
@@ -279,5 +285,11 @@
     opacity: 0.6;
     cursor: not-allowed;
     pointer-events: none;
+  }
+
+  [data-slot="ask-user-submit-btn"][data-submitting="true"] {
+    background: color-mix(in srgb, var(--surface-base) 40%, transparent);
+    border-color: var(--border-base);
+    color: var(--text-weak);
   }
 }
