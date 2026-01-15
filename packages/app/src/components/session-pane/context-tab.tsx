@@ -237,7 +237,7 @@ export function ContextTab(props: ContextTabProps) {
     const c = ctx()
     const count = counts()
     return [
-      { label: "Session", value: props.sessionInfo?.title ?? props.sessionId ?? "—" },
+      { label: "Session", value: props.sessionId ?? "—" },
       { label: "Messages", value: count.all.toLocaleString() },
       { label: "Provider", value: providerLabel() },
       { label: "Model", value: modelLabel() },

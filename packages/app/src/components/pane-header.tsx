@@ -87,7 +87,7 @@ export function PaneHeader(props: PaneHeaderProps) {
             options={sessions()}
             current={currentSession()}
             placeholder="New"
-            label={(x) => x.title}
+            label={() => ""}
             value={(x) => x.id}
             onSelect={handleSessionSelect}
             class="text-12-regular text-text-base max-w-[160px]"

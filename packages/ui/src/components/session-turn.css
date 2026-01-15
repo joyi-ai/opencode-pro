@@ -26,7 +26,7 @@
     align-items: flex-start;
     align-self: stretch;
     min-width: 0;
-    gap: 28px;
+    gap: 8px;
   }
 
   [data-slot="session-turn-sticky-title"] {
@@ -94,7 +94,7 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 4px;
     align-items: flex-start;
     align-self: stretch;
   }
@@ -103,7 +103,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 2px;
     align-self: stretch;
 
     p {
@@ -113,7 +113,7 @@
   }
 
   [data-slot="session-turn-summary-title"] {
-    font-size: 13px; /* text-12-medium */
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-weak);
   }

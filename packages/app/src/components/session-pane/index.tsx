@@ -380,7 +380,7 @@ export function SessionPane(props: SessionPaneProps) {
             }}
           >
             <div class="flex min-h-full flex-col">
-              <div class="flex flex-col">
+              <div class="flex flex-col gap-4">
                 <For each={renderedUserMessages()}>
                   {(message) => (
                     <div data-message-id={message.id}>
@@ -390,6 +390,7 @@ export function SessionPane(props: SessionPaneProps) {
                         lastUserMessageID={sessionMessages.lastUserMessage()?.id}
                         stepsExpanded={store.stepsExpanded[message.id] ?? false}
                         onStepsExpandedToggle={() => setStore("stepsExpanded", message.id, (x) => !x)}
+                        hideTitle={true}
                         actions={{
                           onEdit: messageActions.editMessage,
                           onRestore: messageActions.restoreCheckpoint,
@@ -398,7 +399,7 @@ export function SessionPane(props: SessionPaneProps) {
                         }}
                         classes={{
                           root: "min-w-0 w-full relative !h-auto",
-                          content: "flex flex-col justify-between !overflow-visible !h-auto",
+                          content: "flex flex-col justify-between !overflow-visible !h-auto [&_[data-slot=session-turn-message-content]]:!mt-0",
                           container: "w-full max-w-200 mx-auto px-6",
                         }}
                       />

@@ -276,53 +276,6 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
 
   return (
     <div class="shrink-0 flex flex-col">
-      <Show when={view().terminal.opened()}>
-        <div
-          class="relative w-full flex flex-col shrink-0"
-          style={{ height: `${Math.min(layout.terminal.height(), MAX_TERMINAL_HEIGHT)}px` }}
-        >
-          <ResizeHandle
-            direction="vertical"
-            size={Math.min(layout.terminal.height(), MAX_TERMINAL_HEIGHT)}
-            min={80}
-            max={300}
-            collapseThreshold={40}
-            onResize={layout.terminal.resize}
-            onCollapse={view().terminal.close}
-          />
-          <Tabs variant="alt" value={terminal.active()} onChange={terminal.open}>
-            <Tabs.List class="h-8">
-              <For each={terminal.all()}>
-                {(pty: LocalPTY) => (
-                  <Tabs.Trigger
-                    value={pty.id}
-                    closeButton={
-                      <Tooltip value="Close terminal" placement="bottom">
-                        <IconButton icon="close" variant="ghost" onClick={() => terminal.close(pty.id)} />
-                      </Tooltip>
-                    }
-                  >
-                    {pty.title}
-                  </Tabs.Trigger>
-                )}
-              </For>
-              <div class="h-full flex items-center justify-center">
-                <Tooltip value="New terminal">
-                  <IconButton icon="plus-small" variant="ghost" iconSize="large" onClick={terminal.new} />
-                </Tooltip>
-              </div>
-            </Tabs.List>
-            <For each={terminal.all()}>
-              {(pty: LocalPTY) => (
-                <Tabs.Content value={pty.id}>
-                  <Terminal pty={pty} onCleanup={terminal.update} onConnectError={() => terminal.clone(pty.id)} />
-                </Tabs.Content>
-              )}
-            </For>
-          </Tabs>
-        </div>
-      </Show>
-
       <div class="px-3 pt-2 flex justify-center">
         <div class="w-full max-w-[800px]">
           <PromptInput
@@ -334,6 +287,60 @@ export function MultiPanePromptPanel(props: { paneId: string; sessionId?: string
           />
         </div>
       </div>
+
+      <Show when={view().terminal.opened()}>
+        <div class="px-3 pt-2 pb-2 flex justify-center">
+          <div
+            class="relative w-full max-w-[800px] flex flex-col shrink-0 border border-border-base rounded-md overflow-hidden"
+            style={{ height: `${Math.min(layout.terminal.height(), MAX_TERMINAL_HEIGHT)}px` }}
+          >
+            <ResizeHandle
+              direction="vertical"
+              size={Math.min(layout.terminal.height(), MAX_TERMINAL_HEIGHT)}
+              min={80}
+              max={300}
+              collapseThreshold={40}
+              onResize={layout.terminal.resize}
+              onCollapse={view().terminal.close}
+            />
+            <div class="absolute top-1 right-1 z-10">
+              <Tooltip value="Close terminal panel" placement="left">
+                <IconButton icon="close" variant="ghost" onClick={() => view().terminal.close()} />
+              </Tooltip>
+            </div>
+            <Tabs variant="alt" value={terminal.active()} onChange={terminal.open}>
+              <Tabs.List class="h-8">
+                <For each={terminal.all()}>
+                  {(pty: LocalPTY) => (
+                    <Tabs.Trigger
+                      value={pty.id}
+                      closeButton={
+                        <Tooltip value="Close terminal" placement="bottom">
+                          <IconButton icon="close" variant="ghost" onClick={() => terminal.close(pty.id)} />
+                        </Tooltip>
+                      }
+                    >
+                      {pty.title}
+                    </Tabs.Trigger>
+                  )}
+                </For>
+                <div class="h-full flex items-center justify-center">
+                  <Tooltip value="New terminal">
+                    <IconButton icon="plus-small" variant="ghost" iconSize="large" onClick={terminal.new} />
+                  </Tooltip>
+                </div>
+              </Tabs.List>
+              <For each={terminal.all()}>
+                {(pty: LocalPTY) => (
+                  <Tabs.Content value={pty.id}>
+                    <Terminal pty={pty} onCleanup={terminal.update} onConnectError={() => terminal.clone(pty.id)} />
+                  </Tabs.Content>
+                )}
+              </For>
+            </Tabs>
+          </div>
+        </div>
+      </Show>
     </div>
   )
 }

@@ -147,7 +147,7 @@ export function MobileView(props: MobileViewProps) {
       onClick={mobileAutoScroll.handleInteraction}
       class="relative mt-2 min-w-0 w-full h-full overflow-y-auto no-scrollbar pb-12"
     >
-      <div ref={mobileAutoScroll.contentRef} class="flex flex-col gap-45 items-start justify-start mt-4">
+      <div ref={mobileAutoScroll.contentRef} class="flex flex-col gap-4 items-start justify-start mt-4">
         <For each={props.visibleUserMessages()}>
           {(message) => (
             <SessionTurn
@@ -156,6 +156,7 @@ export function MobileView(props: MobileViewProps) {
               lastUserMessageID={props.lastUserMessage()?.id}
               stepsExpanded={store.mobileStepsExpanded[message.id] ?? false}
               onStepsExpandedToggle={() => setStore("mobileStepsExpanded", message.id, (x) => !x)}
+              hideTitle={true}
               onUserInteracted={() => {
                 setStore("userInteracted", true)
                 props.onUserInteracted?.()
@@ -164,7 +165,7 @@ export function MobileView(props: MobileViewProps) {
               classes={{
                 root: "min-w-0 w-full relative",
                 content:
-                  "flex flex-col justify-between !overflow-visible [&_[data-slot=session-turn-message-header]]:top-[-32px]",
+                  "flex flex-col justify-between !overflow-visible [&_[data-slot=session-turn-message-header]]:top-[-32px] [&_[data-slot=session-turn-message-content]]:!mt-0",
                 container: "px-4",
               }}
             />

@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
+  gap: 8px;
 }
 
 [data-component="message-wrapper"] {
@@ -30,8 +30,9 @@
 [data-component="message-actions-row"] {
   display: flex;
   justify-content: flex-end;
-  min-height: 32px;
-  margin-top: 6px;
+  min-height: 0;
+  margin-top: 0;
+  margin-bottom: -4px;
 }
 
 [data-component="message-actions"] [data-slot="message-action-delete"][data-confirm="true"] {
@@ -165,7 +166,7 @@
   width: 100%;
 
   [data-component="markdown"] {
-    margin-top: 32px;
+    margin-top: 4px;
     font-size: var(--font-size-base);
   }
 }
@@ -175,7 +176,7 @@
   opacity: 0.7;
 
   [data-component="markdown"] {
-    margin-top: 24px;
+    margin-top: 8px;
     font-style: italic !important;
   }
 }

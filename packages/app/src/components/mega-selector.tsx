@@ -404,10 +404,13 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
               ref={(el) => (modelColumnRef = el)}
               class="relative border-r border-border-base w-[240px] shrink-0"
               onMouseEnter={handleModelHover}
-              onMouseLeave={() => setIsModelExpanded(false)}
+              onMouseLeave={() => {
+                setIsModelExpanded(false)
+                setExpandDirection("down")
+              }}
             >
               <div
-                class="flex flex-col p-2 bg-surface-raised-stronger-non-alpha transition-all duration-200 ease-out"
+                class="flex flex-col p-2 bg-surface-raised-stronger-non-alpha"
                 classList={{
                   "absolute left-0 z-50 shadow-xl rounded-md": isModelExpanded(),
                   "relative h-full": !isModelExpanded(),
