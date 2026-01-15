@@ -109,6 +109,8 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
   }
 
   const handleModelHover = () => {
+    // Only expand in opencode mode, not in claude code or codex modes
+    if (!isOpencodeMode()) return
     if (isModelExpanded()) return
     const rect = modelColumnRef?.getBoundingClientRect()
     if (!rect) return
