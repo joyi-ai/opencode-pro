@@ -139,29 +139,29 @@ export function HomeScreen(props: HomeScreenProps) {
     // Use the global worktree delete endpoint which doesn't require Instance context
     const url = new URL("/global/worktree", globalSDK.url)
     url.searchParams.set("directory", worktree)
-    await fetch(url.toString(), { method: "DELETE" })
-      .then(async (res) => {
-        if (!res.ok) {
-          const text = await res.text().catch(() => "Unknown error")
-          throw new Error(text)
-        }
-        // If the deleted worktree was selected, clear the selection
-        if (effectiveWorktree() === worktree) {
-          handleSelectWorktree(undefined)
-        }
-        showToast({
-          variant: "success",
-          title: "Worktree deleted",
-        })
+    try {
+      const res = await fetch(url.toString(), { method: "DELETE" })
+      if (!res.ok) {
+        const text = await res.text().catch(() => "Unknown error")
+        throw new Error(text || "Failed to delete worktree.")
+      }
+      // If the deleted worktree was selected, clear the selection
+      if (effectiveWorktree() === worktree) {
+        handleSelectWorktree(undefined)
+      }
+      showToast({
+        variant: "success",
+        title: "Worktree deleted",
       })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : "Failed to delete worktree."
-        showToast({
-          variant: "error",
-          title: "Failed to delete worktree",
-          description: message,
-        })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete worktree."
+      showToast({
+        variant: "error",
+        title: "Failed to delete worktree",
+        description: message,
       })
+      throw error
+    }
   }
 
   return (

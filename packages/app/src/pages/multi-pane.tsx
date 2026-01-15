@@ -101,6 +101,17 @@ const createAskUserResponder = (sync: SyncContext, baseUrl: string, directory: s
       return response.json()
     }
 
+    if (input.reject) {
+      const response = await fetch(`${baseUrl}/askuser/${input.requestID}/cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-opencode-directory": directory,
+        },
+      })
+      return response.json()
+    }
+
     const response = await fetch(`${baseUrl}/askuser/${input.requestID}/reply`, {
       method: "POST",
       headers: {
@@ -357,8 +368,7 @@ function MultiPaneContent(props: MultiPanePageProps) {
         worktreePath={worktreePath}
         onConfirm={async () => {
           await globalSDK.client.session.worktree.delete({
-            sessionID: pane.sessionId!,
-            directory,
+            directory: worktreePath,
           })
           showToast({
             title: "Worktree deleted",

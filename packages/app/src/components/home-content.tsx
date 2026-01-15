@@ -284,7 +284,17 @@ export function HomeContent(props: HomeContentProps) {
     return worktreeLabel(current)
   }
 
+  const isManagedWorktree = (path: string) => {
+    const project = worktreeProject()
+    if (!project || !("id" in project)) return false
+    const normalized = normalizeDirectory(path).toLowerCase()
+    const projectId = project.id.toLowerCase()
+    const pattern = new RegExp(`/opencode/worktree/${projectId}/[^/]+/?$`)
+    return pattern.test(normalized)
+  }
+
   async function handleDeleteWorktree(path: string) {
+    if (!isManagedWorktree(path)) return
     const key = normalizeDirectory(path)
     // Add to deleting set
     setDeletingWorktrees((prev) => new Set([...prev, path]))
@@ -294,6 +304,8 @@ export function HomeContent(props: HomeContentProps) {
       if (key) {
         setDeletedWorktrees((prev) => new Set([...prev, key]))
       }
+    } catch {
+      // Delete failed; keep the worktree visible.
     } finally {
       // Remove from deleting set
       setDeletingWorktrees((prev) => {
@@ -342,7 +354,7 @@ export function HomeContent(props: HomeContentProps) {
                 >
                   <span class="truncate">{label}</span>
                 </Button>
-                <Show when={option.kind === "worktree" ? option : undefined}>
+                <Show when={option.kind === "worktree" && isManagedWorktree(option.path) ? option : undefined}>
                   {(worktree) => {
                     const isDeleting = () => deletingWorktrees().has(worktree().path)
                     return (

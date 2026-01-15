@@ -2671,7 +2671,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               }}
             />
             <div class="flex items-center gap-2">
-              <SessionContextUsage />
+              <SessionContextUsage sessionId={effectiveSessionId()} sessionKey={sessionKey()} />
               <Show when={(info() as any)?.worktree?.path}>
                 <button
                   type="button"
@@ -2685,7 +2685,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                         worktreePath={worktreePath}
                         onConfirm={async () => {
                           await sdk.client.session.worktree.delete({
-                            sessionID: session.id,
+                            directory: worktreePath,
                           })
                           showToast({
                             title: "Worktree deleted",
