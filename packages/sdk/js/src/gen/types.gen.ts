@@ -752,12 +752,6 @@ export type PermissionRule = {
 
 export type PermissionRuleset = Array<PermissionRule>
 
-export type WorktreeInfo = {
-  path: string
-  branch: string
-  cleanup?: "ask" | "always" | "never"
-}
-
 export type Session = {
   id: string
   projectID: string
@@ -797,9 +791,6 @@ export type Session = {
   }
   variant?: string | null
   thinking?: boolean
-  worktree?: WorktreeInfo
-  worktreeRequested?: boolean
-  worktreeCleanup?: "ask" | "always" | "never"
 }
 
 export type EventSessionCreated = {
@@ -1979,19 +1970,7 @@ export type Path = {
   home: string
   state: string
   config: string
-  worktree: string
   directory: string
-}
-
-export type Worktree = {
-  name: string
-  branch: string
-  directory: string
-}
-
-export type WorktreeCreateInput = {
-  name?: string
-  startCommand?: string
 }
 
 export type VcsInfo = {
@@ -2262,6 +2241,17 @@ export type McpResource = {
   description?: string
   mimeType?: string
   client: string
+}
+
+export type Worktree = {
+  name: string
+  branch: string
+  directory: string
+}
+
+export type WorktreeCreateInput = {
+  name?: string
+  startCommand?: string
 }
 
 export type LspStatus = {
@@ -3305,51 +3295,6 @@ export type PathGetResponses = {
 
 export type PathGetResponse = PathGetResponses[keyof PathGetResponses]
 
-export type WorktreeListData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/experimental/worktree"
-}
-
-export type WorktreeListResponses = {
-  /**
-   * List of worktree directories
-   */
-  200: Array<string>
-}
-
-export type WorktreeListResponse = WorktreeListResponses[keyof WorktreeListResponses]
-
-export type WorktreeCreateData = {
-  body?: WorktreeCreateInput
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/experimental/worktree"
-}
-
-export type WorktreeCreateErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type WorktreeCreateError = WorktreeCreateErrors[keyof WorktreeCreateErrors]
-
-export type WorktreeCreateResponses = {
-  /**
-   * Worktree created
-   */
-  200: Worktree
-}
-
-export type WorktreeCreateResponse = WorktreeCreateResponses[keyof WorktreeCreateResponses]
-
 export type VcsGetData = {
   body?: never
   path?: never
@@ -3450,8 +3395,6 @@ export type SessionCreateData = {
     parentID?: string
     title?: string
     permission?: PermissionRuleset
-    useWorktree?: boolean
-    worktreeCleanup?: "ask" | "always" | "never"
     mode?: {
       id: string
     }
@@ -3738,8 +3681,6 @@ export type SessionInitResponse = SessionInitResponses[keyof SessionInitResponse
 export type SessionForkData = {
   body?: {
     messageID?: string
-    useWorktree?: boolean
-    worktreeCleanup?: "ask" | "always" | "never"
   }
   path: {
     sessionID: string
@@ -4404,76 +4345,6 @@ export type SessionUnrevertResponses = {
 }
 
 export type SessionUnrevertResponse = SessionUnrevertResponses[keyof SessionUnrevertResponses]
-
-export type SessionWorktreeDeleteData = {
-  body?: never
-  path: {
-    sessionID: string
-  }
-  query?: {
-    directory?: string
-  }
-  url: "/session/{sessionID}/worktree"
-}
-
-export type SessionWorktreeDeleteErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type SessionWorktreeDeleteError = SessionWorktreeDeleteErrors[keyof SessionWorktreeDeleteErrors]
-
-export type SessionWorktreeDeleteResponses = {
-  /**
-   * Worktree removed
-   */
-  200: boolean
-}
-
-export type SessionWorktreeDeleteResponse = SessionWorktreeDeleteResponses[keyof SessionWorktreeDeleteResponses]
-
-export type SessionWorktreeGetData = {
-  body?: never
-  path: {
-    sessionID: string
-  }
-  query?: {
-    directory?: string
-  }
-  url: "/session/{sessionID}/worktree"
-}
-
-export type SessionWorktreeGetErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type SessionWorktreeGetError = SessionWorktreeGetErrors[keyof SessionWorktreeGetErrors]
-
-export type SessionWorktreeGetResponses = {
-  /**
-   * Worktree status
-   */
-  200: {
-    exists: boolean
-    path?: string
-    cleanup?: "ask" | "always" | "never"
-  }
-}
-
-export type SessionWorktreeGetResponse = SessionWorktreeGetResponses[keyof SessionWorktreeGetResponses]
 
 export type PermissionRespondData = {
   body?: {
@@ -5456,6 +5327,51 @@ export type ExperimentalResourceListResponses = {
 
 export type ExperimentalResourceListResponse =
   ExperimentalResourceListResponses[keyof ExperimentalResourceListResponses]
+
+export type WorktreeListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/experimental/worktree"
+}
+
+export type WorktreeListResponses = {
+  /**
+   * List of worktree directories
+   */
+  200: Array<string>
+}
+
+export type WorktreeListResponse = WorktreeListResponses[keyof WorktreeListResponses]
+
+export type WorktreeCreateData = {
+  body?: WorktreeCreateInput
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/experimental/worktree"
+}
+
+export type WorktreeCreateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorktreeCreateError = WorktreeCreateErrors[keyof WorktreeCreateErrors]
+
+export type WorktreeCreateResponses = {
+  /**
+   * Worktree created
+   */
+  200: Worktree
+}
+
+export type WorktreeCreateResponse = WorktreeCreateResponses[keyof WorktreeCreateResponses]
 
 export type LspStatusData = {
   body?: never

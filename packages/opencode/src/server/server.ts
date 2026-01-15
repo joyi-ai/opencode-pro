@@ -59,6 +59,7 @@ import { Installation } from "@/installation"
 import { MDNS } from "./mdns"
 import { QuestionRoute } from "./question"
 import { ThemeRoute } from "./theme"
+import { Worktree } from "@/worktree"
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
 
@@ -452,6 +453,36 @@ export namespace Server {
                 properties: {},
               },
             })
+            return c.json(true)
+          },
+        )
+        .delete(
+          "/global/worktree",
+          describeRoute({
+            summary: "Delete managed worktree",
+            description: "Delete a managed git worktree by its path. Does not require project context.",
+            operationId: "global.worktree.delete",
+            responses: {
+              200: {
+                description: "Worktree deleted",
+                content: {
+                  "application/json": {
+                    schema: resolver(z.boolean()),
+                  },
+                },
+              },
+              ...errors(400, 404),
+            },
+          }),
+          validator(
+            "query",
+            z.object({
+              directory: z.string(),
+            }),
+          ),
+          async (c) => {
+            const { directory } = c.req.valid("query")
+            await Worktree.remove(directory)
             return c.json(true)
           },
         )
@@ -2994,6 +3025,53 @@ export namespace Server {
           }),
           async (c) => {
             return c.json(await MCP.resources())
+          },
+        )
+        .get(
+          "/experimental/worktree",
+          describeRoute({
+            summary: "List worktrees",
+            description: "List all sandbox worktrees for the current project.",
+            operationId: "worktree.list",
+            responses: {
+              200: {
+                description: "List of worktree directories",
+                content: {
+                  "application/json": {
+                    schema: resolver(z.array(z.string())),
+                  },
+                },
+              },
+            },
+          }),
+          async (c) => {
+            const sandboxes = await Worktree.list()
+            return c.json(sandboxes)
+          },
+        )
+        .post(
+          "/experimental/worktree",
+          describeRoute({
+            summary: "Create worktree",
+            description: "Create a new git worktree for the current project.",
+            operationId: "worktree.create",
+            responses: {
+              200: {
+                description: "Worktree created",
+                content: {
+                  "application/json": {
+                    schema: resolver(Worktree.Info),
+                  },
+                },
+              },
+              ...errors(400),
+            },
+          }),
+          validator("json", Worktree.CreateInput.optional()),
+          async (c) => {
+            const input = c.req.valid("json") ?? {}
+            const result = await Worktree.create(input)
+            return c.json(result)
           },
         )
         .get(

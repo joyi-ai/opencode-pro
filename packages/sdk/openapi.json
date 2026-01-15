@@ -2147,94 +2147,6 @@
         ]
       }
     },
-    "/experimental/worktree": {
-      "post": {
-        "operationId": "worktree.create",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "summary": "Create worktree",
-        "description": "Create a new git worktree for the current project.",
-        "responses": {
-          "200": {
-            "description": "Worktree created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Worktree"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorktreeCreateInput"
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.worktree.create({\n  ...\n})"
-          }
-        ]
-      },
-      "get": {
-        "operationId": "worktree.list",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "summary": "List worktrees",
-        "description": "List all sandbox worktrees for the current project.",
-        "responses": {
-          "200": {
-            "description": "List of worktree directories",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.worktree.list({\n  ...\n})"
-          }
-        ]
-      }
-    },
     "/vcs": {
       "get": {
         "operationId": "vcs.get",
@@ -2466,17 +2378,6 @@
                   },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
-                  },
-                  "useWorktree": {
-                    "type": "boolean"
-                  },
-                  "worktreeCleanup": {
-                    "type": "string",
-                    "enum": [
-                      "ask",
-                      "always",
-                      "never"
-                    ]
                   },
                   "mode": {
                     "type": "object",
@@ -3110,17 +3011,6 @@
                   "messageID": {
                     "type": "string",
                     "pattern": "^msg.*"
-                  },
-                  "useWorktree": {
-                    "type": "boolean"
-                  },
-                  "worktreeCleanup": {
-                    "type": "string",
-                    "enum": [
-                      "ask",
-                      "always",
-                      "never"
-                    ]
                   }
                 }
               }
@@ -4650,149 +4540,6 @@
           {
             "lang": "js",
             "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.unrevert({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/session/{sessionID}/worktree": {
-      "get": {
-        "operationId": "session.worktree.get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "sessionID",
-            "schema": {
-              "type": "string",
-              "pattern": "^ses.*"
-            },
-            "required": true
-          }
-        ],
-        "summary": "Get worktree status",
-        "description": "Get the worktree status for a session.",
-        "responses": {
-          "200": {
-            "description": "Worktree status",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "exists": {
-                      "type": "boolean"
-                    },
-                    "path": {
-                      "type": "string"
-                    },
-                    "cleanup": {
-                      "type": "string",
-                      "enum": [
-                        "ask",
-                        "always",
-                        "never"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "exists"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.worktree.get({\n  ...\n})"
-          }
-        ]
-      },
-      "delete": {
-        "operationId": "session.worktree.delete",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "sessionID",
-            "schema": {
-              "type": "string",
-              "pattern": "^ses.*"
-            },
-            "required": true
-          }
-        ],
-        "summary": "Remove worktree",
-        "description": "Manually remove the worktree associated with a session.",
-        "responses": {
-          "200": {
-            "description": "Worktree removed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "boolean"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.worktree.delete({\n  ...\n})"
           }
         ]
       }
@@ -7156,6 +6903,94 @@
           {
             "lang": "js",
             "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.experimental.resource.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/worktree": {
+      "get": {
+        "operationId": "worktree.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List worktrees",
+        "description": "List all sandbox worktrees for the current project.",
+        "responses": {
+          "200": {
+            "description": "List of worktree directories",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.worktree.list({\n  ...\n})"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "worktree.create",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Create worktree",
+        "description": "Create a new git worktree for the current project.",
+        "responses": {
+          "200": {
+            "description": "Worktree created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Worktree"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorktreeCreateInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.worktree.create({\n  ...\n})"
           }
         ]
       }
@@ -10145,30 +9980,6 @@
           "$ref": "#/components/schemas/PermissionRule"
         }
       },
-      "WorktreeInfo": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "branch": {
-            "type": "string"
-          },
-          "cleanup": {
-            "default": "ask",
-            "type": "string",
-            "enum": [
-              "ask",
-              "always",
-              "never"
-            ]
-          }
-        },
-        "required": [
-          "path",
-          "branch"
-        ]
-      },
       "Session": {
         "type": "object",
         "properties": {
@@ -10313,20 +10124,6 @@
           },
           "thinking": {
             "type": "boolean"
-          },
-          "worktree": {
-            "$ref": "#/components/schemas/WorktreeInfo"
-          },
-          "worktreeRequested": {
-            "type": "boolean"
-          },
-          "worktreeCleanup": {
-            "type": "string",
-            "enum": [
-              "ask",
-              "always",
-              "never"
-            ]
           }
         },
         "required": [
@@ -12845,9 +12642,6 @@
           "config": {
             "type": "string"
           },
-          "worktree": {
-            "type": "string"
-          },
           "directory": {
             "type": "string"
           }
@@ -12856,39 +12650,8 @@
           "home",
           "state",
           "config",
-          "worktree",
           "directory"
         ]
-      },
-      "Worktree": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "branch": {
-            "type": "string"
-          },
-          "directory": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "branch",
-          "directory"
-        ]
-      },
-      "WorktreeCreateInput": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "startCommand": {
-            "type": "string"
-          }
-        }
       },
       "VcsInfo": {
         "type": "object",
@@ -13872,6 +13635,36 @@
           "uri",
           "client"
         ]
+      },
+      "Worktree": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "branch",
+          "directory"
+        ]
+      },
+      "WorktreeCreateInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "startCommand": {
+            "type": "string"
+          }
+        }
       },
       "LSPStatus": {
         "type": "object",

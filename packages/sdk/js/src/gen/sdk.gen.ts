@@ -168,8 +168,6 @@ import type {
   SessionUnshareResponses,
   SessionUpdateErrors,
   SessionUpdateResponses,
-  SessionWorktreeGetErrors,
-  SessionWorktreeGetResponses,
   SkillListResponses,
   SubtaskPartInput,
   TextPartInput,
@@ -307,36 +305,6 @@ export class Worktree extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
-    })
-  }
-
-  /**
-   * Get worktree status
-   *
-   * Get the worktree status for a session.
-   */
-  public get<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<SessionWorktreeGetResponses, SessionWorktreeGetErrors, ThrowOnError>({
-      url: "/session/{sessionID}/worktree",
-      ...options,
-      ...params,
     })
   }
 }
@@ -1518,8 +1486,6 @@ export class Session extends HeyApiClient {
       parentID?: string
       title?: string
       permission?: PermissionRuleset
-      useWorktree?: boolean
-      worktreeCleanup?: "ask" | "always" | "never"
       mode?: {
         id: string
       }
@@ -1542,8 +1508,6 @@ export class Session extends HeyApiClient {
             { in: "body", key: "parentID" },
             { in: "body", key: "title" },
             { in: "body", key: "permission" },
-            { in: "body", key: "useWorktree" },
-            { in: "body", key: "worktreeCleanup" },
             { in: "body", key: "mode" },
             { in: "body", key: "agent" },
             { in: "body", key: "model" },
@@ -1813,8 +1777,6 @@ export class Session extends HeyApiClient {
       sessionID: string
       directory?: string
       messageID?: string
-      useWorktree?: boolean
-      worktreeCleanup?: "ask" | "always" | "never"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1826,8 +1788,6 @@ export class Session extends HeyApiClient {
             { in: "path", key: "sessionID" },
             { in: "query", key: "directory" },
             { in: "body", key: "messageID" },
-            { in: "body", key: "useWorktree" },
-            { in: "body", key: "worktreeCleanup" },
           ],
         },
       ],
@@ -2385,8 +2345,6 @@ export class Session extends HeyApiClient {
       ...params,
     })
   }
-
-  worktree = new Worktree({ client: this.client })
 }
 
 export class Message extends HeyApiClient {
@@ -3738,8 +3696,6 @@ export class OpencodeClient extends HeyApiClient {
 
   path = new Path({ client: this.client })
 
-  worktree = new Worktree({ client: this.client })
-
   vcs = new Vcs({ client: this.client })
 
   git = new Git({ client: this.client })
@@ -3769,6 +3725,8 @@ export class OpencodeClient extends HeyApiClient {
   mcp = new Mcp({ client: this.client })
 
   experimental = new Experimental({ client: this.client })
+
+  worktree = new Worktree({ client: this.client })
 
   lsp = new Lsp({ client: this.client })
 
