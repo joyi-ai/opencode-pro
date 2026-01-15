@@ -487,7 +487,7 @@ export function SessionTurn(
     for (const item of allToolParts()) {
       const tool = item.part.tool.toLowerCase()
 
-      if (tool === "askuserquestion" || tool === "exitplanmode") {
+      if (tool === "askuserquestion" || tool === "exitplanmode" || tool === "question") {
         result.push(item)
       }
     }
@@ -511,7 +511,7 @@ export function SessionTurn(
 
   const stepsToolParts = createMemo(() => {
     const result: { part: ToolPart; message: AssistantMessage }[] = []
-    const skip = new Set(["askuserquestion", "exitplanmode", "task"])
+    const skip = new Set(["askuserquestion", "exitplanmode", "task", "question"])
     const seen = new Set<string>()
 
     for (const item of allToolParts()) {
@@ -729,9 +729,9 @@ export function SessionTurn(
       const fallbackStatus = computeStatusFromPart(childPart)
       const useToolLabel = !input?.command
       const current = (useToolLabel ? toolLabel : undefined) ?? fallbackStatus ?? "Thinking"
-      const status = done ? "done" : current
+      const status = done ? "Done" : current
 
-      result.push({ id: part.id, name, status, done })
+      result.push({ id: part.id, name: name.charAt(0).toUpperCase() + name.slice(1), status, done })
     }
 
     return result

@@ -409,7 +409,7 @@
     color: transparent;
     -webkit-background-clip: text;
     background-clip: text;
-    animation: task-agent-shimmer 2.2s linear infinite;
+    animation: task-agent-shimmer 3.5s linear infinite;
   }
 
   [data-slot="session-turn-task-agent"][data-done="true"] [data-slot="session-turn-task-agent-text"] {

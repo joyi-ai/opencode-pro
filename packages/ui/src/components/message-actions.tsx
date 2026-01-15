@@ -1,5 +1,6 @@
 import { Show, createSignal, onCleanup, splitProps, type ComponentProps } from "solid-js"
 import { IconButton } from "./icon-button"
+import { Tooltip } from "./tooltip"
 
 export type MessageActionHandlers = {
   onEdit?: () => void
@@ -77,44 +78,48 @@ export function MessageActions(props: ComponentProps<"div"> & MessageActionHandl
         }}
       >
         <Show when={hasEdit()}>
-          <IconButton
-            variant="ghost"
-            icon="edit-small-2"
-            aria-label="Edit message"
-            title="Edit"
-            onClick={() => local.onEdit?.()}
-          />
+          <Tooltip value="Edit" placement="top" gutter={8}>
+            <IconButton
+              variant="ghost"
+              icon="edit-small-2"
+              aria-label="Edit message"
+              onClick={() => local.onEdit?.()}
+            />
+          </Tooltip>
         </Show>
         <Show when={hasRestore()}>
-          <IconButton
-            variant="ghost"
-            icon="arrow-left"
-            aria-label={isConfirming("restore") ? "Confirm restore checkpoint" : "Restore checkpoint"}
-            title={isConfirming("restore") ? "Confirm restore" : "Restore"}
-            data-slot="message-action-restore"
-            data-confirm={isConfirming("restore") ? "true" : undefined}
-            onClick={handleRestore}
-          />
+          <Tooltip value={isConfirming("restore") ? "Confirm restore" : "Restore checkpoint"} placement="top" gutter={8}>
+            <IconButton
+              variant="ghost"
+              icon="revert"
+              aria-label={isConfirming("restore") ? "Confirm restore checkpoint" : "Restore checkpoint"}
+              data-slot="message-action-restore"
+              data-confirm={isConfirming("restore") ? "true" : undefined}
+              onClick={handleRestore}
+            />
+          </Tooltip>
         </Show>
         <Show when={hasRetry()}>
-          <IconButton
-            variant="ghost"
-            icon="arrow-up"
-            aria-label="Retry message"
-            title="Retry"
-            onClick={() => local.onRetry?.()}
-          />
+          <Tooltip value="Retry" placement="top" gutter={8}>
+            <IconButton
+              variant="ghost"
+              icon="retry"
+              aria-label="Retry message"
+              onClick={() => local.onRetry?.()}
+            />
+          </Tooltip>
         </Show>
         <Show when={hasDelete()}>
-          <IconButton
-            variant="ghost"
-            icon="circle-x"
-            aria-label={isConfirming("delete") ? "Confirm delete message" : "Delete message"}
-            title={isConfirming("delete") ? "Confirm delete" : "Delete"}
-            data-slot="message-action-delete"
-            data-confirm={isConfirming("delete") ? "true" : undefined}
-            onClick={handleDelete}
-          />
+          <Tooltip value={isConfirming("delete") ? "Confirm delete" : "Delete"} placement="top" gutter={8}>
+            <IconButton
+              variant="ghost"
+              icon="circle-x"
+              aria-label={isConfirming("delete") ? "Confirm delete message" : "Delete message"}
+              data-slot="message-action-delete"
+              data-confirm={isConfirming("delete") ? "true" : undefined}
+              onClick={handleDelete}
+            />
+          </Tooltip>
         </Show>
       </div>
     </Show>
