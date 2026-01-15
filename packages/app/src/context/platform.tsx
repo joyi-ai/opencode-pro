@@ -43,6 +43,11 @@ export type Platform = {
 
   /** Listen to a Tauri event (Tauri only) */
   listen?<T>(event: string, handler: (payload: T) => void): Promise<() => void>
+  /** Get the configured default server URL (desktop only) */
+  getDefaultServerUrl?(): Promise<string | null>
+
+  /** Set the default server URL to use on app startup (desktop only) */
+  setDefaultServerUrl?(url: string | null): Promise<void>
 }
 
 export const { use: usePlatform, provider: PlatformProvider } = createSimpleContext({

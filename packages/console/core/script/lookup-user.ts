@@ -41,8 +41,8 @@ if (identifier.startsWith("wrk_")) {
         subscribed: SubscriptionTable.timeCreated,
       })
       .from(UserTable)
-      .innerJoin(WorkspaceTable, eq(WorkspaceTable.id, UserTable.workspaceID))
-      .innerJoin(SubscriptionTable, eq(SubscriptionTable.userID, UserTable.id))
+      .rightJoin(WorkspaceTable, eq(WorkspaceTable.id, UserTable.workspaceID))
+      .leftJoin(SubscriptionTable, eq(SubscriptionTable.userID, UserTable.id))
       .where(eq(UserTable.accountID, accountID))
       .then((rows) =>
         rows.map((row) => ({
@@ -113,6 +113,13 @@ async function printWorkspace(workspaceID: string) {
       .select({
         balance: BillingTable.balance,
         customerID: BillingTable.customerID,
+        reload: BillingTable.reload,
+        subscription: {
+          id: BillingTable.subscriptionID,
+          couponID: BillingTable.subscriptionCouponID,
+          plan: BillingTable.subscriptionPlan,
+          booked: BillingTable.timeSubscriptionBooked,
+        },
       })
       .from(BillingTable)
       .where(eq(BillingTable.workspaceID, workspace.id))
@@ -121,6 +128,11 @@ async function printWorkspace(workspaceID: string) {
           rows.map((row) => ({
             ...row,
             balance: `$${(row.balance / 100000000).toFixed(2)}`,
+            subscription: row.subscription.id
+              ? `Subscribed ${row.subscription.couponID ? `(coupon: ${row.subscription.couponID}) ` : ""}`
+              : row.subscription.booked
+                ? `Waitlist ${row.subscription.plan} plan`
+                : undefined,
           }))[0],
       ),
   )
@@ -149,6 +161,7 @@ async function printWorkspace(workspaceID: string) {
       ),
   )
 
+  /*
   await printTable("Usage", (tx) =>
     tx
       .select({
@@ -174,6 +187,7 @@ async function printWorkspace(workspaceID: string) {
         })),
       ),
   )
+        */
 }
 
 function formatMicroCents(value: number | null | undefined) {

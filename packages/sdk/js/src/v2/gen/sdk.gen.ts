@@ -1486,6 +1486,7 @@ export class Session extends HeyApiClient {
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
       directory?: string
+      roots?: boolean
       start?: number
       afterID?: string
       search?: string
@@ -1499,6 +1500,7 @@ export class Session extends HeyApiClient {
         {
           args: [
             { in: "query", key: "directory" },
+            { in: "query", key: "roots" },
             { in: "query", key: "start" },
             { in: "query", key: "afterID" },
             { in: "query", key: "search" },

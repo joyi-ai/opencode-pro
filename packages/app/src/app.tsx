@@ -37,7 +37,7 @@ export { PlatformProvider, type Platform } from "@/context/platform"
 
 declare global {
   interface Window {
-    __OPENCODE__?: { updaterEnabled?: boolean; port?: number; serverReady?: boolean }
+    __OPENCODE__?: { updaterEnabled?: boolean; port?: number; serverReady?: boolean; serverPassword?: string }
     __OPENCODE_SAFE_GET_COMPUTED_STYLE__?: boolean
   }
 }
@@ -95,9 +95,10 @@ function ServerKey(props: ParentProps) {
   )
 }
 
-export function AppInterface() {
+export function AppInterface(props: { defaultUrl?: string } = {}) {
+  const defaultUrl = props.defaultUrl ?? defaultServerUrl
   return (
-    <ServerProvider defaultUrl={defaultServerUrl}>
+    <ServerProvider defaultUrl={defaultUrl}>
       <ServerKey>
         <GlobalSDKProvider>
           <GlobalSyncProvider>

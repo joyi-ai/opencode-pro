@@ -28,3 +28,4 @@ logs/
 .env
 .env.local
 *.md
+*.bun-build

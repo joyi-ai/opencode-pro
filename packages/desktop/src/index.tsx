@@ -14,12 +14,11 @@ import { AsyncStorage } from "@solid-primitives/storage"
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http"
 import { Store } from "@tauri-apps/plugin-store"
 import { Logo } from "@opencode-ai/ui/logo"
-import { Suspense, createResource, ParentProps } from "solid-js"
+import { createSignal, Show, Accessor, JSX, createResource } from "solid-js"
 
 import { UPDATER_ENABLED } from "./updater"
 import { createMenu } from "./menu"
 import pkg from "../package.json"
-import { Show } from "solid-js"
 
 const root = document.getElementById("root")
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
@@ -30,7 +29,7 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 
 let update: Update | null = null
 
-const platform: Platform = {
+const createPlatform = (password: Accessor<string | null>): Platform => ({
   platform: "desktop",
   version: pkg.version,
 
@@ -256,13 +255,29 @@ const platform: Platform = {
       .catch(() => undefined)
   },
 
-  // Use native fetch for localhost (works better on Windows), tauriFetch for remote
   fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
+    const pw = password()
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
-    if (url.includes("localhost") || url.includes("127.0.0.1")) {
-      return fetch(input, init)
+    const isLocal = url.includes("localhost") || url.includes("127.0.0.1")
+
+    const addHeader = (headers: Headers) => {
+      if (!pw) return
+      headers.set("Authorization", `Basic ${btoa(`opencode:${pw}`)}`)
     }
-    return tauriFetch(input as Parameters<typeof tauriFetch>[0], init)
+
+    if (input instanceof Request) {
+      const headers = new Headers(input.headers)
+      addHeader(headers)
+      const request = new Request(input, { headers })
+      return isLocal ? fetch(request) : tauriFetch(request)
+    }
+
+    const headers = new Headers(init?.headers)
+    addHeader(headers)
+    const nextInit = { ...(init as RequestInit), headers }
+    return isLocal
+      ? fetch(input as RequestInfo, nextInit)
+      : tauriFetch(input as Parameters<typeof tauriFetch>[0], nextInit as RequestInit)
   }) as typeof fetch,
 
   invoke: async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
@@ -272,7 +287,16 @@ const platform: Platform = {
   listen: async <T,>(event: string, handler: (payload: T) => void): Promise<() => void> => {
     return listen<T>(event, (e) => handler(e.payload))
   },
-}
+
+  getDefaultServerUrl: async () => {
+    const result = await invoke<string | null>("get_default_server_url").catch(() => null)
+    return result
+  },
+
+  setDefaultServerUrl: async (url: string | null) => {
+    await invoke("set_default_server_url", { url })
+  },
+})
 
 createMenu()
 
@@ -282,41 +306,47 @@ root?.addEventListener("mousewheel", (e) => {
 })
 
 render(() => {
+  const [serverPassword, setServerPassword] = createSignal<string | null>(null)
+  const platform = createPlatform(() => serverPassword())
+
   return (
     <PlatformProvider value={platform}>
-      {ostype() === "macos" && (
-        <div class="mx-px bg-background-base border-b border-border-weak-base h-8" data-tauri-drag-region />
-      )}
       <AppBaseProviders>
+        {ostype() === "macos" && (
+          <div class="mx-px bg-background-base border-b border-border-weak-base h-8" data-tauri-drag-region />
+        )}
         <ServerGate>
-          <AppInterface />
+          {(data) => {
+            setServerPassword(data().password)
+            window.__OPENCODE__ ??= {}
+            window.__OPENCODE__.serverPassword = data().password ?? undefined
+
+            return <AppInterface defaultUrl={data().url} />
+          }}
         </ServerGate>
       </AppBaseProviders>
     </PlatformProvider>
   )
 }, root!)
 
+type ServerReadyData = { url: string; password: string | null }
+
 // Gate component that waits for the server to be ready
-function ServerGate(props: ParentProps) {
-  const [status] = createResource(async () => {
-    if (window.__OPENCODE__?.serverReady) return
-    return await invoke("ensure_server_started")
-  })
+function ServerGate(props: { children: (data: Accessor<ServerReadyData>) => JSX.Element }) {
+  const [serverData] = createResource<ServerReadyData>(() => invoke("ensure_server_ready"))
 
   return (
     // Not using suspense as not all components are compatible with it (undefined refs)
     <Show
-      when={status.state !== "pending"}
+      when={serverData.state !== "pending" && serverData()}
       fallback={
         <div class="h-screen w-screen flex flex-col items-center justify-center bg-background-base">
           <Logo class="w-xl opacity-12 animate-pulse" />
-          <div class="mt-8 text-14-regular text-text-weak">Starting server...</div>
+          <div class="mt-8 text-14-regular text-text-weak">Initializing...</div>
         </div>
       }
     >
-      {/* Trigger error boundary without rendering the returned value */}
-      {(status(), null)}
-      {props.children}
+      {(data) => props.children(data)}
     </Show>
   )
 }

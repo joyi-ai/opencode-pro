@@ -691,6 +691,7 @@ export namespace MessageV2 {
           return `${msg}: ${e.responseBody}`
         }).trim()
 
+        const metadata = e.url ? { url: e.url } : undefined
         return new MessageV2.APIError(
           {
             message,
@@ -698,6 +699,7 @@ export namespace MessageV2 {
             isRetryable: e.isRetryable,
             responseHeaders: e.responseHeaders,
             responseBody: e.responseBody,
+            metadata,
           },
           { cause: e },
         ).toObject()

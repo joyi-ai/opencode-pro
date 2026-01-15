@@ -8,6 +8,9 @@ import { BunProc } from "../bun"
 import { Instance } from "../project/instance"
 import { Flag } from "../flag/flag"
 import { CodexAuthPlugin } from "./codex"
+import { Session } from "../session"
+import { NamedError } from "@opencode-ai/util/error"
+import { CopilotAuthPlugin } from "./copilot"
 
 export namespace Plugin {
   const log = Log.create({ service: "plugin" })
@@ -17,10 +20,10 @@ export namespace Plugin {
     hook: Hooks
   }
 
-  const BUILTIN = ["opencode-copilot-auth@0.0.11", "opencode-anthropic-auth@0.0.8"]
+  const BUILTIN = ["opencode-anthropic-auth@0.0.9", "@gitlab/opencode-gitlab-auth@1.3.0"]
 
   // Built-in plugins that are directly imported (not installed from npm)
-  const INTERNAL_PLUGINS: PluginInstance[] = [CodexAuthPlugin]
+  const INTERNAL_PLUGINS: PluginInstance[] = [CodexAuthPlugin, CopilotAuthPlugin]
 
   const state = Instance.state(async () => {
     const client = createOpencodeClient({
@@ -46,8 +49,19 @@ export namespace Plugin {
       const version = lastAtIndex > 0 ? spec.substring(lastAtIndex + 1) : "latest"
       const builtin = BUILTIN.some((x) => x.startsWith(pkg + "@"))
       const installed = await BunProc.install(pkg, version).catch((err) => {
-        if (builtin) return ""
-        throw err
+        if (!builtin) throw err
+        const message = err instanceof Error ? err.message : String(err)
+        log.error("failed to install builtin plugin", {
+          pkg,
+          version,
+          error: message,
+        })
+        Bus.publish(Session.Event.Error, {
+          error: new NamedError.Unknown({
+            message: `Failed to install built-in plugin ${pkg}@${version}: ${message}`,
+          }).toObject(),
+        })
+        return ""
       })
       if (!installed) return undefined
       return installed
