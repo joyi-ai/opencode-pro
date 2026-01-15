@@ -318,7 +318,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                           type="button"
                           class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-raised-base-hover text-left"
                           classList={{
-                            "bg-surface-info-base dark:bg-blue-500/40": isCurrent(),
+                            "bg-surface-interactive-base": isCurrent(),
                             "opacity-70": missing().length > 0,
                           }}
                           onClick={() => handleModeSelect(mode)}
@@ -336,7 +336,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                           <span
                             class="flex-1 text-13-medium truncate"
                             classList={{
-                              "text-text-info-base": isCurrent(),
+                              "text-text-interactive-base": isCurrent(),
                               "text-text-strong": !isCurrent(),
                             }}
                           >
@@ -368,7 +368,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                       <button
                         type="button"
                         class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-raised-base-hover text-left"
-                        classList={{ "bg-surface-info-base dark:bg-blue-500/40": isCurrent() }}
+                        classList={{ "bg-surface-interactive-base": isCurrent() }}
                         onClick={() => local.agent.set(agent.name)}
                         onMouseEnter={() => {
                           if (props.floating && floatingSelector.isHoldDragMode()) {
@@ -384,7 +384,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                         <span
                           class="flex-1 text-13-medium capitalize truncate"
                           classList={{
-                            "text-text-info-base": isCurrent(),
+                            "text-text-interactive-base": isCurrent(),
                             "text-text-strong": !isCurrent(),
                           }}
                         >
@@ -532,7 +532,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                             <button
                               type="button"
                               class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-raised-base-hover text-left min-w-0"
-                              classList={{ "bg-surface-info-base dark:bg-blue-500/40": isCurrent() }}
+                              classList={{ "bg-surface-interactive-base": isCurrent() }}
                               onClick={() => {
                                 local.model.set({ modelID: model.id, providerID: model.provider.id }, { recent: true })
                               }}
@@ -552,7 +552,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                               <span
                                 class="flex-1 text-13-regular truncate"
                                 classList={{
-                                  "text-text-info-base": isCurrent(),
+                                  "text-text-interactive-base": isCurrent(),
                                   "text-text-strong": !isCurrent(),
                                 }}
                               >
@@ -605,7 +605,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                                   <button
                                     type="button"
                                     class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-raised-base-hover text-left min-w-0"
-                                    classList={{ "bg-surface-info-base dark:bg-blue-500/40": isCurrent() }}
+                                    classList={{ "bg-surface-interactive-base": isCurrent() }}
                                     onClick={() => {
                                       local.model.set(
                                         { modelID: model.id, providerID: model.provider.id },
@@ -637,7 +637,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                                     <span
                                       class="flex-1 text-13-regular truncate"
                                       classList={{
-                                        "text-text-info-base": isCurrent(),
+                                        "text-text-interactive-base": isCurrent(),
                                         "text-text-strong": !isCurrent(),
                                       }}
                                     >
@@ -705,7 +705,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                         type="button"
                         class="px-2 py-1 rounded text-12-regular text-left hover:bg-surface-raised-base-hover"
                         classList={{
-                          "bg-surface-info-base dark:bg-blue-500/40 text-text-info-base":
+                          "bg-surface-interactive-base text-text-interactive-base":
                             currentVariant() === undefined,
                           "text-text-strong": currentVariant() !== undefined,
                         }}
@@ -729,7 +729,7 @@ export const MegaSelector: Component<{ class?: string; floating?: boolean }> = (
                             type="button"
                             class="px-2 py-1 rounded text-12-regular capitalize text-left hover:bg-surface-raised-base-hover"
                             classList={{
-                              "bg-surface-info-base dark:bg-blue-500/40 text-text-info-base":
+                              "bg-surface-interactive-base text-text-interactive-base":
                                 currentVariant() === variant,
                               "text-text-strong": currentVariant() !== variant,
                             }}
