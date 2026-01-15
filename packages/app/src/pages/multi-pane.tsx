@@ -48,6 +48,11 @@ type AskUserRequestEntry = {
   questions?: Array<{ question: string }>
 }
 
+type PlanModeReplyInput = {
+  requestID: string
+  approved: boolean
+}
+
 type SyncContext = ReturnType<typeof useSync>
 
 const findAskUserRequest = (sync: SyncContext, requestID: string, sessionID?: string) => {
@@ -124,6 +129,20 @@ const createAskUserResponder = (sync: SyncContext, baseUrl: string, directory: s
   }
 }
 
+const createPlanModeResponder = (baseUrl: string, directory: string) => {
+  return async (input: PlanModeReplyInput) => {
+    const response = await fetch(`${baseUrl}/planmode/${input.requestID}/reply`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-opencode-directory": directory,
+      },
+      body: JSON.stringify({ approved: input.approved }),
+    })
+    return response.json()
+  }
+}
+
 // Bridge component to connect LocalProvider's agent setter to DataProvider
 function AgentBridge(props: { setAgentRef: (fn: (name: string) => void) => void; children: any }) {
   const local = useLocal()
@@ -131,8 +150,7 @@ function AgentBridge(props: { setAgentRef: (fn: (name: string) => void) => void;
   return props.children
 }
 
-// Provider wrapper for each pane (provides Local/Terminal context needed by SessionPane)
-function PaneSyncedProviders(props: { paneId: string; directory: string; children: any }) {
+function PaneProviders(props: { paneId: string; directory: string; children: any }) {
   const sync = useSync()
   const sdk = useSDK()
   const respondToPermission = (input: {
@@ -140,20 +158,8 @@ function PaneSyncedProviders(props: { paneId: string; directory: string; childre
     permissionID: string
     response: "once" | "always" | "reject"
   }) => sdk.client.permission.respond(input)
-
   const respondToAskUser = createAskUserResponder(sync, sdk.url, props.directory)
-
-  const respondToPlanMode = async (input: { requestID: string; approved: boolean }) => {
-    const response = await fetch(`${sdk.url}/planmode/${input.requestID}/reply`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-opencode-directory": props.directory,
-      },
-      body: JSON.stringify({ approved: input.approved }),
-    })
-    return response.json()
-  }
+  const respondToPlanMode = createPlanModeResponder(sdk.url, props.directory)
 
   // Use a ref to capture the agent setter from inside LocalProvider
   let setAgentFn: ((name: string) => void) | undefined
@@ -181,55 +187,21 @@ function PaneSyncedProviders(props: { paneId: string; directory: string; childre
   )
 }
 
+// Provider wrapper for each pane (provides Local/Terminal context needed by SessionPane)
+function PaneSyncedProviders(props: { paneId: string; directory: string; children: any }) {
+  return (
+    <PaneProviders paneId={props.paneId} directory={props.directory}>
+      {props.children}
+    </PaneProviders>
+  )
+}
+
 // Wrapper that provides SDK/Sync context for the global prompt
 function GlobalPromptSynced(props: { paneId: string; directory: string; sessionId?: string }) {
-  const sync = useSync()
-  const sdk = useSDK()
-  const respondToPermission = (input: {
-    sessionID: string
-    permissionID: string
-    response: "once" | "always" | "reject"
-  }) => sdk.client.permission.respond(input)
-
-  const respondToAskUser = createAskUserResponder(sync, sdk.url, props.directory)
-
-  const respondToPlanMode = async (input: { requestID: string; approved: boolean }) => {
-    const response = await fetch(`${sdk.url}/planmode/${input.requestID}/reply`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-opencode-directory": props.directory,
-      },
-      body: JSON.stringify({ approved: input.approved }),
-    })
-    return response.json()
-  }
-
-  // Use a ref to capture the agent setter from inside LocalProvider
-  let setAgentFn: ((name: string) => void) | undefined
-
   return (
-    <DataProvider
-      data={sync.data}
-      directory={props.directory}
-      onPermissionRespond={respondToPermission}
-      onAskUserRespond={respondToAskUser}
-      onPlanModeRespond={respondToPlanMode}
-      onSetAgent={(name) => setAgentFn?.(name)}
-      onReasoningPrefetch={(input) => sync.session.prefetchReasoning(input.sessionID, input.messageID)}
-    >
-      <LocalProvider>
-        <AgentBridge setAgentRef={(fn) => (setAgentFn = fn)}>
-          <TerminalProvider paneId={props.paneId}>
-            <FileProvider>
-              <PromptProvider paneId={props.paneId}>
-                <MultiPanePromptPanel paneId={props.paneId} sessionId={props.sessionId} />
-              </PromptProvider>
-            </FileProvider>
-          </TerminalProvider>
-        </AgentBridge>
-      </LocalProvider>
-    </DataProvider>
+    <PaneProviders paneId={props.paneId} directory={props.directory}>
+      <MultiPanePromptPanel paneId={props.paneId} sessionId={props.sessionId} />
+    </PaneProviders>
   )
 }
 

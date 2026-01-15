@@ -17,58 +17,90 @@ async function getLastModel(sessionID: string) {
   return Provider.defaultModel()
 }
 
+type PlanSwitchOption = {
+  label: string
+  description: string
+}
+
+type PlanSwitchCopy = {
+  question: (plan: string) => string
+  header: string
+  options: PlanSwitchOption[]
+  agent: "build" | "plan"
+  partText: (plan: string) => string
+  title: string
+  output: (plan: string) => string
+}
+
+async function executePlanSwitch(
+  ctx: { sessionID: string; messageID: string; callID?: string },
+  copy: PlanSwitchCopy,
+) {
+  const session = await Session.get(ctx.sessionID)
+  const plan = path.relative(Instance.worktree, Session.plan(session))
+  const tool = ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined
+  const answers = await Question.ask({
+    sessionID: ctx.sessionID,
+    questions: [
+      {
+        question: copy.question(plan),
+        header: copy.header,
+        allowOther: false,
+        options: copy.options,
+      },
+    ],
+    tool,
+  })
+
+  const answer = answers[0]?.[0]
+  if (answer === "No") throw new Question.RejectedError()
+
+  const model = await getLastModel(ctx.sessionID)
+
+  const userMsg: MessageV2.User = {
+    id: Identifier.ascending("message"),
+    sessionID: ctx.sessionID,
+    role: "user",
+    time: {
+      created: Date.now(),
+    },
+    agent: copy.agent,
+    model,
+  }
+  await Session.updateMessage(userMsg)
+  await Session.updatePart({
+    id: Identifier.ascending("part"),
+    messageID: userMsg.id,
+    sessionID: ctx.sessionID,
+    type: "text",
+    text: copy.partText(plan),
+    synthetic: true,
+  } satisfies MessageV2.TextPart)
+
+  return {
+    title: copy.title,
+    output: copy.output(plan),
+    metadata: {},
+  }
+}
+
 export const PlanExitTool = Tool.define("plan_exit", {
   description: EXIT_DESCRIPTION,
   parameters: z.object({}),
   async execute(_params, ctx) {
-    const session = await Session.get(ctx.sessionID)
-    const plan = path.relative(Instance.worktree, Session.plan(session))
-    const answers = await Question.ask({
-      sessionID: ctx.sessionID,
-      questions: [
-        {
-          question: `Plan at ${plan} is complete. Would you like to switch to the build agent and start implementing?`,
-          header: "Build Agent",
-          allowOther: false,
-          options: [
-            { label: "Yes", description: "Switch to build agent and start implementing the plan" },
-            { label: "No", description: "Stay with plan agent to continue refining the plan" },
-          ],
-        },
+    return executePlanSwitch(ctx, {
+      question: (plan) =>
+        `Plan at ${plan} is complete. Would you like to switch to the build agent and start implementing?`,
+      header: "Build Agent",
+      options: [
+        { label: "Yes", description: "Switch to build agent and start implementing the plan" },
+        { label: "No", description: "Stay with plan agent to continue refining the plan" },
       ],
-      tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
-    })
-
-    const answer = answers[0]?.[0]
-    if (answer === "No") throw new Question.RejectedError()
-
-    const model = await getLastModel(ctx.sessionID)
-
-    const userMsg: MessageV2.User = {
-      id: Identifier.ascending("message"),
-      sessionID: ctx.sessionID,
-      role: "user",
-      time: {
-        created: Date.now(),
-      },
       agent: "build",
-      model,
-    }
-    await Session.updateMessage(userMsg)
-    await Session.updatePart({
-      id: Identifier.ascending("part"),
-      messageID: userMsg.id,
-      sessionID: ctx.sessionID,
-      type: "text",
-      text: `The plan at ${plan} has been approved, you can now edit files. Execute the plan`,
-      synthetic: true,
-    } satisfies MessageV2.TextPart)
-
-    return {
+      partText: (plan) => `The plan at ${plan} has been approved, you can now edit files. Execute the plan`,
       title: "Switching to build agent",
-      output: "User approved switching to build agent. Wait for further instructions.",
-      metadata: {},
-    }
+      output: () => "User approved switching to build agent. Wait for further instructions.",
+    })
   },
 })
 
@@ -76,55 +108,18 @@ export const PlanEnterTool = Tool.define("plan_enter", {
   description: ENTER_DESCRIPTION,
   parameters: z.object({}),
   async execute(_params, ctx) {
-    const session = await Session.get(ctx.sessionID)
-    const plan = path.relative(Instance.worktree, Session.plan(session))
-
-    const answers = await Question.ask({
-      sessionID: ctx.sessionID,
-      questions: [
-        {
-          question: `Would you like to switch to the plan agent and create a plan saved to ${plan}?`,
-          header: "Plan Mode",
-          allowOther: false,
-          options: [
-            { label: "Yes", description: "Switch to plan agent for research and planning" },
-            { label: "No", description: "Stay with build agent to continue making changes" },
-          ],
-        },
+    return executePlanSwitch(ctx, {
+      question: (plan) => `Would you like to switch to the plan agent and create a plan saved to ${plan}?`,
+      header: "Plan Mode",
+      options: [
+        { label: "Yes", description: "Switch to plan agent for research and planning" },
+        { label: "No", description: "Stay with build agent to continue making changes" },
       ],
-      tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
-    })
-
-    const answer = answers[0]?.[0]
-
-    if (answer === "No") throw new Question.RejectedError()
-
-    const model = await getLastModel(ctx.sessionID)
-
-    const userMsg: MessageV2.User = {
-      id: Identifier.ascending("message"),
-      sessionID: ctx.sessionID,
-      role: "user",
-      time: {
-        created: Date.now(),
-      },
       agent: "plan",
-      model,
-    }
-    await Session.updateMessage(userMsg)
-    await Session.updatePart({
-      id: Identifier.ascending("part"),
-      messageID: userMsg.id,
-      sessionID: ctx.sessionID,
-      type: "text",
-      text: "User has requested to enter plan mode. Switch to plan mode and begin planning.",
-      synthetic: true,
-    } satisfies MessageV2.TextPart)
-
-    return {
+      partText: () => "User has requested to enter plan mode. Switch to plan mode and begin planning.",
       title: "Switching to plan agent",
-      output: `User confirmed to switch to plan mode. A new message has been created to switch you to plan mode. The plan file will be at ${plan}. Begin planning.`,
-      metadata: {},
-    }
+      output: (plan) =>
+        `User confirmed to switch to plan mode. A new message has been created to switch you to plan mode. The plan file will be at ${plan}. Begin planning.`,
+    })
   },
 })

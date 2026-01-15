@@ -101,6 +101,10 @@ export function HomeContent(props: HomeContentProps) {
     }
   }
 
+  const openServerDialog = () => {
+    dialog.show(() => <DialogSelectServer />)
+  }
+
   const projects = createMemo(() =>
     sync.data.project
       .toSorted((a, b) => (b.time.updated ?? b.time.created) - (a.time.updated ?? a.time.created))
@@ -144,6 +148,20 @@ export function HomeContent(props: HomeContentProps) {
     const currentKey = normalizeDirectory(current)
     return projects().filter((project) => normalizeDirectory(project.worktree) !== currentKey)
   })
+
+  const ServerStatusContent = (props: { nameClass?: string }) => (
+    <>
+      <div
+        classList={{
+          "size-2 rounded-full": true,
+          "bg-icon-success-base": server.healthy() === true,
+          "bg-icon-critical-base": server.healthy() === false,
+          "bg-border-weak-base": server.healthy() === undefined,
+        }}
+      />
+      <span class={props.nameClass}>{server.name}</span>
+    </>
+  )
 
   type WorktreeOption =
     | {
@@ -407,17 +425,9 @@ export function HomeContent(props: HomeContentProps) {
                     size="large"
                     variant="ghost"
                     class="mt-4 mx-auto text-14-regular text-text-weak"
-                    onClick={() => dialog.show(() => <DialogSelectServer />)}
+                    onClick={openServerDialog}
                   >
-                    <div
-                      classList={{
-                        "size-2 rounded-full": true,
-                        "bg-icon-success-base": server.healthy() === true,
-                        "bg-icon-critical-base": server.healthy() === false,
-                        "bg-border-weak-base": server.healthy() === undefined,
-                      }}
-                    />
-                    {server.name}
+                    <ServerStatusContent />
                   </Button>
                   <Switch>
                     <Match when={projects().length > 0 || selectedProject()}>
@@ -588,17 +598,9 @@ export function HomeContent(props: HomeContentProps) {
                   size="normal"
                   variant="ghost"
                   class="px-2 text-12-regular text-text-weak min-w-0"
-                  onClick={() => dialog.show(() => <DialogSelectServer />)}
+                  onClick={openServerDialog}
                 >
-                  <div
-                    classList={{
-                      "size-2 rounded-full": true,
-                      "bg-icon-success-base": server.healthy() === true,
-                      "bg-icon-critical-base": server.healthy() === false,
-                      "bg-border-weak-base": server.healthy() === undefined,
-                    }}
-                  />
-                  <span class="truncate max-w-[140px]">{server.name}</span>
+                  <ServerStatusContent nameClass="truncate max-w-[140px]" />
                 </Button>
               </Show>
               <Show when={showThemePicker()}>

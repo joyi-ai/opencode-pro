@@ -213,11 +213,14 @@ export function SessionPane(props: SessionPaneProps) {
     if (!container) return
     const content = container.firstElementChild as HTMLElement | null
     if (!content) return
+    // Observe the messages container (inner div) which actually grows when content streams in
+    const messagesContainer = content.firstElementChild as HTMLElement | null
+    if (!messagesContainer) return
 
     const observer = new ResizeObserver(() => {
       if (isAtBottom()) container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
     })
-    observer.observe(content)
+    observer.observe(messagesContainer)
     return () => observer.disconnect()
   })
 
