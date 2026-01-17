@@ -589,7 +589,7 @@ pub fn run() {
             let app_for_nav = app.clone();
             let mut window_builder =
                 WebviewWindow::builder(&app, "main", WebviewUrl::App("/".into()))
-                    .title("OpenCode")
+                    .title("Aura")
                     .inner_size(size.width as f64, size.height as f64)
                     .decorations(true)
                     .zoom_hotkeys_enabled(true)
