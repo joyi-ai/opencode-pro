@@ -69,10 +69,6 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
           opened: false,
         },
         sessionTabs: {} as Record<string, SessionTabs>,
-        worktree: {
-          enabled: false,
-          cleanup: "ask" as "ask" | "always" | "never",
-        },
         sessionView: {} as Record<string, SessionView>,
         projectsRecent: {} as Record<string, number>,
       }),
@@ -399,31 +395,6 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
             return
           }
           setStore("session", "width", width)
-        },
-      },
-      worktree: {
-        enabled: createMemo(() => store.worktree?.enabled ?? false),
-        cleanup: createMemo(() => store.worktree?.cleanup ?? "ask"),
-        toggle() {
-          if (!store.worktree) {
-            setStore("worktree", { enabled: true, cleanup: "ask" as const })
-            return
-          }
-          setStore("worktree", "enabled", (x) => !x)
-        },
-        setEnabled(enabled: boolean) {
-          if (!store.worktree) {
-            setStore("worktree", { enabled, cleanup: "ask" as const })
-            return
-          }
-          setStore("worktree", "enabled", enabled)
-        },
-        setCleanup(cleanup: "ask" | "always" | "never") {
-          if (!store.worktree) {
-            setStore("worktree", { enabled: false, cleanup })
-            return
-          }
-          setStore("worktree", "cleanup", cleanup)
         },
       },
       mobileSidebar: {

@@ -8,6 +8,7 @@ import type { WSContext } from "hono/ws"
 import { Instance } from "../project/instance"
 import { lazy } from "@opencode-ai/util/lazy"
 import { Shell } from "@/shell/shell"
+import path from "path"
 
 export namespace Pty {
   const log = Log.create({ service: "pty" })
@@ -87,6 +88,20 @@ export namespace Pty {
 
   export function list() {
     return Array.from(state().values()).map((s) => s.info)
+  }
+
+  export function listByDirectory(directory: string) {
+    const normalized = path.normalize(directory)
+    const isWindows = process.platform === "win32"
+    const root = isWindows ? normalized.toLowerCase() : normalized
+    return Array.from(state().values())
+      .filter((session) => {
+        const cwd = path.normalize(session.info.cwd)
+        const match = isWindows ? cwd.toLowerCase() : cwd
+        if (match === root) return true
+        return match.startsWith(root + path.sep)
+      })
+      .map((session) => session.info)
   }
 
   export function get(id: string) {

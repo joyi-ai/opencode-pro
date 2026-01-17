@@ -25,7 +25,7 @@ export function PaneGrid(props: PaneGridProps) {
   const paneBodyRefs = new Map<string, HTMLDivElement>()
   const paneAnimations = new Map<string, Animation>()
   const maximizeAnimations = new Map<string, Animation>()
-  const scrollCache = new Map<string, { node: HTMLElement; top: number }>()
+  const scrollCache = new Map<string, { node: HTMLElement; top: number; bottom: boolean }>()
   let previousRects = new Map<string, DOMRect>()
   let disposed = false
   let resizeCleanup: (() => void) | null = null
@@ -120,12 +120,17 @@ export function PaneGrid(props: PaneGridProps) {
   function captureScroll(id: string, body: HTMLElement) {
     const node = body.querySelector('[data-scroll-container="session-pane"]') as HTMLElement | null
     if (!node) return
-    scrollCache.set(id, { node, top: node.scrollTop })
+    const bottom = node.scrollHeight - node.clientHeight - node.scrollTop < 2
+    scrollCache.set(id, { node, top: node.scrollTop, bottom })
   }
 
   function restoreScroll(id: string) {
     const entry = scrollCache.get(id)
     if (!entry) return
+    if (entry.bottom) {
+      entry.node.scrollTop = entry.node.scrollHeight
+      return
+    }
     entry.node.scrollTop = entry.top
   }
 

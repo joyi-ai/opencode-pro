@@ -1260,6 +1260,15 @@ export function SessionTurn(
                               {(text) => <div data-slot="session-turn-commentary">{text()}</div>}
                             </Show>
 
+                            <StepsContainer
+                              toolParts={stepsToolParts()}
+                              expanded={props.stepsExpanded ?? false}
+                              working={working()}
+                              status={store.status}
+                              duration={store.duration}
+                              onToggle={props.onStepsExpandedToggle ?? (() => {})}
+                            />
+
                             <Show when={hasReasoning()}>
                               <div data-slot="session-turn-reasoning-section">
                                 <Show when={!working()}>
@@ -1293,7 +1302,7 @@ export function SessionTurn(
                                       <div
                                         ref={(el) => setStore("reasoningRef", el)}
                                         data-slot="session-turn-reasoning"
-                                        data-streaming={reasoningStreaming()}
+                                        data-streaming={working()}
                                         data-animating={reasoningAnimating()}
                                       >
                                         {text()}
@@ -1303,15 +1312,6 @@ export function SessionTurn(
                                 </Show>
                               </div>
                             </Show>
-
-                            <StepsContainer
-                              toolParts={stepsToolParts()}
-                              expanded={props.stepsExpanded ?? false}
-                              working={working()}
-                              status={store.status}
-                              duration={store.duration}
-                              onToggle={props.onStepsExpandedToggle ?? (() => {})}
-                            />
                           </div>
                         </Show>
                       </div>

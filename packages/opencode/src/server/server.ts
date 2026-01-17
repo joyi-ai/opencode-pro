@@ -482,8 +482,8 @@ export namespace Server {
           ),
           async (c) => {
             const { directory } = c.req.valid("query")
-            await Worktree.remove(directory)
-            return c.json(true)
+            const removed = await Worktree.remove(directory)
+            return c.json(removed)
           },
         )
         .use(async (c, next) => {

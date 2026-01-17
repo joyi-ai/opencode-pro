@@ -19,6 +19,8 @@ import { Command } from "../command"
 import { Snapshot } from "@/snapshot"
 import { StorageSqlite } from "@/storage/sqlite"
 import { Global } from "@/global"
+import { Worktree } from "@/worktree"
+import { Pty } from "@/pty"
 
 import type { Provider } from "@/provider/provider"
 import { PermissionNext } from "@/permission/next"
@@ -511,6 +513,34 @@ export namespace Session {
           await Storage.remove(["session", project.id, sid]).catch((e) =>
             log.error("failed to remove session file", { sid, error: e }),
           )
+        }
+
+        if (input.removeWorktree) {
+          const directories = new Set<string>()
+          for (const item of allSessions) {
+            if (!item.directory) continue
+            directories.add(item.directory)
+          }
+
+          for (const dir of directories) {
+            const managed = Worktree.isManaged(dir)
+            if (!managed) continue
+            const terminals = Pty.listByDirectory(dir)
+            for (const terminal of terminals) {
+              await Pty.remove(terminal.id)
+            }
+            const result = await Worktree.remove(dir)
+              .then((value) => ({ value, error: undefined }))
+              .catch((error) => ({ value: false, error }))
+            if (!result.value) {
+              const details = result.error ? { error: result.error } : {}
+              log.warn("failed to remove worktree for session", {
+                sessionID: input.sessionID,
+                directory: dir,
+                ...details,
+              })
+            }
+          }
         }
 
         Bus.publish(Event.Deleted, {

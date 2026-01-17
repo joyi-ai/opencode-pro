@@ -47,7 +47,6 @@ import { usePlatform } from "@/context/platform"
 import { VoiceButton } from "@/components/voice-button"
 import { SettingsDialog } from "@/components/settings-dialog"
 import { DialogSelectModel } from "@/components/dialog-select-model"
-import { DialogDeleteWorktree } from "@/components/dialog-delete-worktree"
 import { makeContextKey, makeSessionKey } from "@/utils/layout-key"
 
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"]
@@ -266,26 +265,6 @@ interface SlashCommand {
   keybind?: string
   type: "builtin" | "custom" | "skill" | "codex" | "claude-code"
   action?: CodexSlashAction
-}
-
-const WorktreeToggleButton: Component = () => {
-  const sync = useSync()
-  const layout = useLayout()
-  const isGitProject = createMemo(() => sync.data.vcs !== undefined)
-  const enabled = createMemo(() => layout.worktree.enabled())
-
-  return (
-    <Show when={isGitProject()}>
-      <Tooltip placement="top" value={enabled() ? "Worktree isolation enabled" : "Worktree isolation disabled"}>
-        <IconButton
-          icon="branch"
-          variant={enabled() ? "secondary" : "ghost"}
-          class="size-6"
-          onClick={() => layout.worktree.toggle()}
-        />
-      </Tooltip>
-    </Show>
-  )
 }
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
@@ -2013,8 +1992,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
       let existing = info()
       if (!existing) {
-        const worktreeEnabled = layout.worktree.enabled()
-        const worktreeCleanup = layout.worktree.cleanup()
         const meta = sessionUpdatePayload()
         const created = await sdk.client.session.create({
           mode: meta.mode,
@@ -2022,7 +1999,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           model: meta.model,
           variant: meta.variant,
           thinking: meta.thinking,
-          ...(worktreeEnabled ? { useWorktree: true, worktreeCleanup } : {}),
         })
         existing = created.data ?? undefined
         if (existing) {
@@ -2652,7 +2628,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               </Match>
               <Match when={store.mode === "normal"}>
                 <MegaSelector />
-                <WorktreeToggleButton />
                 <Show when={inlineNotifier()}>
                   <div class="flex items-center h-6 px-2 text-12-regular text-text-subtle/70 animate-in slide-in-from-bottom-1 fade-in duration-200">
                     {inlineNotifier()}
@@ -2675,33 +2650,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             />
             <div class="flex items-center gap-2">
               <SessionContextUsage sessionId={effectiveSessionId()} contextKey={contextKey()} />
-              <Show when={(info() as any)?.worktree?.path}>
-                <button
-                  type="button"
-                  class="text-12-regular text-text-critical-base hover:text-text-critical-base-hover hover:underline"
-                  onClick={() => {
-                    const session = info()
-                    const worktreePath = (session as any)?.worktree?.path
-                    if (!worktreePath || !session) return
-                    dialog.show(() => (
-                      <DialogDeleteWorktree
-                        worktreePath={worktreePath}
-                        onConfirm={async () => {
-                          await sdk.client.global.worktree.delete({
-                            directory: worktreePath,
-                          })
-                          showToast({
-                            title: "Worktree deleted",
-                            variant: "success",
-                          })
-                        }}
-                      />
-                    ))
-                  }}
-                >
-                  Delete worktree
-                </button>
-              </Show>
               <Show when={store.mode === "normal"}>
                 <Tooltip placement="top" value="Attach image">
                   <Button type="button" variant="ghost" class="size-6" onClick={() => fileInputRef.click()}>

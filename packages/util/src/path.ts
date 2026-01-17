@@ -59,7 +59,7 @@ export function truncateDirectoryPrefix(path: string): string {
 
 export function getDirectory(path: string | undefined) {
   if (!path) return ""
-  const parts = path.split("/")
+  const parts = path.split(/[\/\\]/)
   return parts.slice(0, parts.length - 1).join("/") + "/"
 }
 
