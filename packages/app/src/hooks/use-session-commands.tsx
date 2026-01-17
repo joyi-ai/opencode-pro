@@ -9,7 +9,7 @@ import { useSync } from "@/context/sync"
 import { usePrompt } from "@/context/prompt"
 import { usePermission } from "@/context/permission"
 import { DialogSelectFile } from "@/components/dialog-select-file"
-import { DialogSelectMcp } from "@/components/dialog-select-mcp"
+import { SettingsDialog } from "@/components/settings-dialog"
 import { showToast } from "@opencode-ai/ui/toast"
 import { extractPromptFromParts } from "@/utils/prompt"
 import { base64Encode } from "@opencode-ai/util/encode"
@@ -116,7 +116,7 @@ export function useSessionCommands(options: UseSessionCommandsOptions): void {
       keybind: "mod+;",
       slash: "mcp",
       disabled: !enabled(),
-      onSelect: () => dialog.show(() => <DialogSelectMcp />),
+      onSelect: () => dialog.show(() => <SettingsDialog initialTab="mcp" />),
     },
     {
       id: "permissions.autoaccept",

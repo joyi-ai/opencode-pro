@@ -11,7 +11,7 @@ import { showToast } from "@opencode-ai/ui/toast"
 import type { Config } from "@opencode-ai/sdk/v2/client"
 import { DialogEditMcp, DialogRemoveMcp, isMcpConfigured, type McpConfigured } from "./dialog-edit-mcp"
 
-export const DialogSelectMcp: Component = () => {
+export const McpSettingsPanel: Component = () => {
   const sync = useSync()
   const sdk = useSDK()
   const dialog = useDialog()
@@ -106,9 +106,11 @@ export const DialogSelectMcp: Component = () => {
   }
 
   return (
-    <Dialog title="MCPs" description={`${enabledCount()} of ${totalCount()} enabled`}>
+    <div class="flex flex-col gap-2">
       <div class="flex items-center justify-between px-2.5 pb-2">
-        <div class="text-12-regular text-text-weak">Synced to OpenCode, Claude Code, and Codex</div>
+        <div class="text-12-regular text-text-weak">
+          {enabledCount()} of {totalCount()} enabled - Synced to OpenCode, Claude Code, and Codex
+        </div>
         <Button size="small" icon="plus" onClick={() => showEdit()}>
           Add MCP
         </Button>
@@ -180,6 +182,14 @@ export const DialogSelectMcp: Component = () => {
           )
         }}
       </List>
+    </div>
+  )
+}
+
+export const DialogSelectMcp: Component = () => {
+  return (
+    <Dialog title="MCPs" description="Manage MCP servers for this project.">
+      <McpSettingsPanel />
     </Dialog>
   )
 }

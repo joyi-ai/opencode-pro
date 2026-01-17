@@ -27,7 +27,7 @@ export function VoiceButton(props: VoiceButtonProps) {
   const handleClick = () => {
     // If model not ready, show settings dialog to download
     if (voice.state.modelStatus() !== "ready") {
-      dialog.show(() => <SettingsDialog />)
+      dialog.show(() => <SettingsDialog initialTab="voice" />)
       return
     }
 

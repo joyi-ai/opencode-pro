@@ -57,7 +57,6 @@ import { useTheme, type ColorScheme } from "@opencode-ai/ui/theme"
 import { DialogSelectProvider } from "@/components/dialog-select-provider"
 import { DialogEditProject } from "@/components/dialog-edit-project"
 import { DialogSelectServer } from "@/components/dialog-select-server"
-import { DialogSelectMcp } from "@/components/dialog-select-mcp"
 import { useCommand, type CommandOption } from "@/context/command"
 import { ConstrainDragXAxis } from "@/utils/solid-dnd"
 import { navStart } from "@/utils/perf"
@@ -524,32 +523,15 @@ export default function Layout(props: ParentProps) {
     dialog.show(() => <DialogSelectServer />)
   }
 
-  function openMcp() {
+  function openSettings(initialTab?: "plugins" | "mcp" | "skills" | "voice") {
     const directory = mcpDirectory()
     if (!directory) {
+      const description =
+        initialTab === "mcp" ? "Open a project to manage MCP servers." : "Open a project to access settings."
       showToast({
         variant: "error",
         title: "Open a project",
-        description: "Open a project to manage MCP servers.",
-      })
-      return
-    }
-    dialog.show(() => (
-      <SDKProvider directory={directory}>
-        <SyncProvider>
-          <DialogSelectMcp />
-        </SyncProvider>
-      </SDKProvider>
-    ))
-  }
-
-  function openSettings() {
-    const directory = mcpDirectory()
-    if (!directory) {
-      showToast({
-        variant: "error",
-        title: "Open a project",
-        description: "Open a project to access settings.",
+        description,
       })
       return
     }
@@ -557,11 +539,15 @@ export default function Layout(props: ParentProps) {
       <SDKProvider directory={directory}>
         <SyncProvider>
           <LocalProvider>
-            <SettingsDialog />
+            <SettingsDialog initialTab={initialTab} />
           </LocalProvider>
         </SyncProvider>
       </SDKProvider>
     ))
+  }
+
+  function openMcp() {
+    openSettings("mcp")
   }
 
   function navigateToProject(directory: string | undefined) {

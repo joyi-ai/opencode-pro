@@ -30,6 +30,9 @@ export namespace Config {
     if (target.plugin && source.plugin) {
       merged.plugin = Array.from(new Set([...target.plugin, ...source.plugin]))
     }
+    if (target.disabled_plugins && source.disabled_plugins) {
+      merged.disabled_plugins = Array.from(new Set([...target.disabled_plugins, ...source.disabled_plugins]))
+    }
     if (target.instructions && source.instructions) {
       merged.instructions = Array.from(new Set([...target.instructions, ...source.instructions]))
     }
@@ -89,6 +92,7 @@ export namespace Config {
     result.mode = result.mode || {}
     result.modes = result.modes || {}
     result.plugin = result.plugin || []
+    result.disabled_plugins = result.disabled_plugins || []
 
     const directories = [
       Global.Path.config,
@@ -123,6 +127,7 @@ export namespace Config {
           result.mode ??= {}
           result.modes ??= {}
           result.plugin ??= []
+          result.disabled_plugins ??= []
         }
       }
 
@@ -866,6 +871,10 @@ export namespace Config {
         })
         .optional(),
       plugin: z.string().array().optional(),
+      disabled_plugins: z
+        .array(z.string())
+        .optional()
+        .describe("Disable OpenCode plugins by name or specifier"),
       snapshot: z.boolean().optional(),
       worktree: z
         .object({
