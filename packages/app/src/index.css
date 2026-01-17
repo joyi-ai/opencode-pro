@@ -6,6 +6,10 @@
   }
 }
 
+*[data-tauri-drag-region] {
+  app-region: drag;
+}
+
 /* Context panel overlay styles */
 .context-panel-backdrop {
   opacity: 0;
