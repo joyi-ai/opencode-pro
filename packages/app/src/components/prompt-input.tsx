@@ -36,6 +36,7 @@ import { Button } from "@opencode-ai/ui/button"
 import { Icon } from "@opencode-ai/ui/icon"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { IconButton } from "@opencode-ai/ui/icon-button"
+import { Spinner } from "@opencode-ai/ui/spinner"
 import { getDirectory, getFilename } from "@opencode-ai/util/path"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { showToast } from "@opencode-ai/ui/toast"
@@ -2566,13 +2567,25 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 </Switch>
               }
             >
-              <IconButton
-                type="submit"
-                disabled={!prompt.dirty() && store.imageAttachments.length === 0 && !working()}
-                icon={working() ? "stop" : "arrow-up"}
-                variant="primary"
-                class="h-6 w-4.5"
-              />
+              <Switch>
+                <Match when={working()}>
+                  <button
+                    type="submit"
+                    class="flex h-6 w-6 items-center justify-center rounded-sm bg-icon-strong-base"
+                  >
+                    <Spinner class="h-4 w-4" />
+                  </button>
+                </Match>
+                <Match when={true}>
+                  <IconButton
+                    type="submit"
+                    disabled={!prompt.dirty() && store.imageAttachments.length === 0}
+                    icon="arrow-up"
+                    variant="primary"
+                    class="h-6 w-4.5"
+                  />
+                </Match>
+              </Switch>
             </Tooltip>
           </div>
         </div>
