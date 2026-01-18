@@ -1,9 +1,10 @@
-import { For, Show, createMemo, createSignal, createEffect, untrack, onCleanup, batch, type ParentProps } from "solid-js"
+import { For, Show, createMemo, createSignal, createEffect, untrack, onCleanup, lazy, type ParentProps } from "solid-js"
 import { Portal } from "solid-js/web"
 import { useMultiPane, type PaneConfig } from "@/context/multi-pane"
 import { useRadialDial } from "@/hooks/use-radial-dial"
 import { RadialDialMenu } from "@opencode-ai/ui/radial-dial-menu"
-import { HistoryPopover } from "@/components/radial-dial/history-popover"
+
+const HistoryPopover = lazy(() => import("@/components/radial-dial/history-popover").then((m) => ({ default: m.HistoryPopover })))
 
 const FLIP_DURATION = 200
 const GRID_GAP = 0
