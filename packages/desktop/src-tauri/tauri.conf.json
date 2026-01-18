@@ -15,7 +15,7 @@
       {
         "label": "main",
         "create": false,
-        "title": "OpenCode",
+        "title": "Aura",
         "url": "/",
         "decorations": true,
         "dragDropEnabled": false,

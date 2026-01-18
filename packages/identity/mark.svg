@@ -1,7 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512"><svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" fill="#131010"></rect>
-<path d="M320 224V352H192V224H320Z" fill="#5A5858"></path>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M384 416H128V96H384V416ZM320 160H192V352H320V160Z" fill="white"></path>
-</svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
-@media (prefers-color-scheme: dark) { :root { filter: none; } }
-</style></svg>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d0d1a"/>
+      <stop offset="100%" style="stop-color:#1a1a2e"/>
+    </linearGradient>
+    <filter id="softBlur" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="40" result="blur"/>
+    </filter>
+    <filter id="medBlur" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="25" result="blur"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bgGradient)"/>
+  <ellipse cx="140" cy="160" rx="160" ry="140" fill="#7c3aed" opacity="0.55" filter="url(#softBlur)"/>
+  <ellipse cx="390" cy="140" rx="150" ry="160" fill="#ec4899" opacity="0.45" filter="url(#softBlur)"/>
+  <ellipse cx="120" cy="375" rx="170" ry="150" fill="#3b82f6" opacity="0.4" filter="url(#softBlur)"/>
+  <ellipse cx="400" cy="360" rx="140" ry="160" fill="#06b6d4" opacity="0.45" filter="url(#softBlur)"/>
+  <ellipse cx="256" cy="256" rx="130" ry="130" fill="#a855f7" opacity="0.35" filter="url(#medBlur)"/>
+  <path d="M256 100 L360 390 L320 390 L300 330 L212 330 L192 390 L152 390 L256 100 Z M256 170 L228 290 L284 290 L256 170 Z" fill="white" fill-rule="evenodd"/>
+</svg>

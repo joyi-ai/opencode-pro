@@ -1,5 +1,21 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" fill="#FDFCFC"/>
-<path d="M320 224V352H192V224H320Z" fill="#E6E5E6"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M384 416H128V96H384V416ZM320 160H192V352H320V160Z" fill="#17181C"/>
+  <defs>
+    <linearGradient id="bgGradientLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fdfcfc"/>
+      <stop offset="100%" style="stop-color:#f5f5f7"/>
+    </linearGradient>
+    <filter id="softBlurLight" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="40" result="blur"/>
+    </filter>
+    <filter id="medBlurLight" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="25" result="blur"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bgGradientLight)"/>
+  <ellipse cx="140" cy="160" rx="160" ry="140" fill="#7c3aed" opacity="0.35" filter="url(#softBlurLight)"/>
+  <ellipse cx="390" cy="140" rx="150" ry="160" fill="#ec4899" opacity="0.3" filter="url(#softBlurLight)"/>
+  <ellipse cx="120" cy="375" rx="170" ry="150" fill="#3b82f6" opacity="0.28" filter="url(#softBlurLight)"/>
+  <ellipse cx="400" cy="360" rx="140" ry="160" fill="#06b6d4" opacity="0.3" filter="url(#softBlurLight)"/>
+  <ellipse cx="256" cy="256" rx="130" ry="130" fill="#a855f7" opacity="0.22" filter="url(#medBlurLight)"/>
+  <path d="M256 100 L360 390 L320 390 L300 330 L212 330 L192 390 L152 390 L256 100 Z M256 170 L228 290 L284 290 L256 170 Z" fill="#1a1a2e" fill-rule="evenodd"/>
 </svg>

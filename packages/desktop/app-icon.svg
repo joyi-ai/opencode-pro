@@ -1,0 +1,53 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d0d1a"/>
+      <stop offset="100%" style="stop-color:#1a1a2e"/>
+    </linearGradient>
+    
+    <!-- Glow filters -->
+    <filter id="softBlur" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="80" result="blur"/>
+    </filter>
+    <filter id="medBlur" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="50" result="blur"/>
+    </filter>
+  </defs>
+  
+  <!-- Background with rounded corners -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bgGradient)"/>
+  
+  <!-- Soft glow blobs - like shifting gradient -->
+  <!-- Purple/violet blob top-left -->
+  <ellipse cx="280" cy="320" rx="320" ry="280" fill="#7c3aed" opacity="0.55" filter="url(#softBlur)"/>
+  
+  <!-- Pink/magenta blob top-right -->
+  <ellipse cx="780" cy="280" rx="300" ry="320" fill="#ec4899" opacity="0.45" filter="url(#softBlur)"/>
+  
+  <!-- Blue blob bottom-left -->
+  <ellipse cx="240" cy="750" rx="340" ry="300" fill="#3b82f6" opacity="0.4" filter="url(#softBlur)"/>
+  
+  <!-- Cyan/teal blob bottom-right -->
+  <ellipse cx="800" cy="720" rx="280" ry="320" fill="#06b6d4" opacity="0.45" filter="url(#softBlur)"/>
+  
+  <!-- Central warm glow -->
+  <ellipse cx="512" cy="512" rx="260" ry="260" fill="#a855f7" opacity="0.35" filter="url(#medBlur)"/>
+  
+  <!-- Stylized "A" - clean geometric design -->
+  <path d="
+    M512 200
+    L720 780
+    L640 780
+    L600 660
+    L424 660
+    L384 780
+    L304 780
+    L512 200
+    Z
+    M512 340
+    L456 580
+    L568 580
+    L512 340
+    Z
+  " fill="white" fill-rule="evenodd"/>
+</svg>
