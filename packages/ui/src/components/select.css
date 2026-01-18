@@ -98,6 +98,9 @@
     [data-slot="select-select-item-label"] {
       flex: 1;
       min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     [data-slot="select-select-item-label"][data-full-width] {
