@@ -1,6 +1,38 @@
 [data-component="spinner"] {
-  color: var(--text-base);
   flex-shrink: 0;
-  width: 18px;
+  width: 24px;
   aspect-ratio: 1;
+
+  circle[data-color="color-1"] {
+    fill: var(--text-interactive-base);
+  }
+  circle[data-color="color-2"] {
+    fill: var(--icon-success-base);
+  }
+  circle[data-color="color-3"] {
+    fill: var(--icon-warning-base);
+  }
+  circle[data-color="color-4"] {
+    fill: var(--icon-info-base);
+  }
+}
+
+@keyframes spinner-dot {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes spinner-dot-dim {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.2;
+  }
 }
