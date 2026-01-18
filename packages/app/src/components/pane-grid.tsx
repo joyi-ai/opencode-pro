@@ -1,8 +1,9 @@
-import { For, Show, createMemo, createSignal, createEffect, untrack, onCleanup, type ParentProps } from "solid-js"
+import { For, Show, createMemo, createSignal, createEffect, untrack, onCleanup, batch, type ParentProps } from "solid-js"
 import { Portal } from "solid-js/web"
 import { useMultiPane, type PaneConfig } from "@/context/multi-pane"
 import { useRadialDial } from "@/hooks/use-radial-dial"
 import { RadialDialMenu } from "@opencode-ai/ui/radial-dial-menu"
+import { HistoryPopover } from "@/components/radial-dial/history-popover"
 
 const FLIP_DURATION = 200
 const GRID_GAP = 0
@@ -35,6 +36,9 @@ export function PaneGrid(props: PaneGridProps) {
   const [paneIds, setPaneIds] = createSignal<string[]>([])
   const [lastPage, setLastPage] = createSignal(multiPane.currentPage())
 
+  // History popover state
+  const [historyPopover, setHistoryPopover] = createSignal<{ x: number; y: number; directory: string; worktree?: string } | null>(null)
+
   // Radial dial for the entire grid area
   const radialDial = useRadialDial({
     onAction: (action) => {
@@ -57,9 +61,31 @@ export function PaneGrid(props: PaneGridProps) {
             multiPane.toggleMaximize(focusedId)
           }
           break
+        case "history":
+          if (focusedPane?.directory) {
+            setHistoryPopover({
+              x: radialDial.centerX(),
+              y: radialDial.centerY(),
+              directory: focusedPane.directory,
+              worktree: focusedPane.worktree,
+            })
+          }
+          break
       }
     },
   })
+
+  const handleHistorySessionSelect = (sessionId: string) => {
+    const focusedId = multiPane.focusedPaneId()
+    if (focusedId) {
+      multiPane.updatePane(focusedId, { sessionId })
+    }
+    setHistoryPopover(null)
+  }
+
+  const handleHistoryClose = () => {
+    setHistoryPopover(null)
+  }
 
   onCleanup(() => {
     disposed = true
@@ -798,6 +824,22 @@ export function PaneGrid(props: PaneGridProps) {
             highlightedAction={radialDial.highlightedAction()}
           />
         </Portal>
+      </Show>
+
+      {/* History popover */}
+      <Show when={historyPopover()}>
+        {(popover) => (
+          <Portal>
+            <HistoryPopover
+              x={popover().x}
+              y={popover().y}
+              directory={popover().directory}
+              worktree={popover().worktree}
+              onSessionSelect={handleHistorySessionSelect}
+              onClose={handleHistoryClose}
+            />
+          </Portal>
+        )}
       </Show>
     </div>
   )

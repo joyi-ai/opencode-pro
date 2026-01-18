@@ -1,7 +1,7 @@
 import { For, createMemo } from "solid-js"
 import { Icon } from "./icon"
 
-export type RadialAction = "new" | "close" | "clone" | "expand"
+export type RadialAction = "new" | "close" | "clone" | "expand" | "history"
 
 export interface RadialDialMenuProps {
   centerX: number
@@ -18,10 +18,14 @@ interface Segment {
 }
 
 const SEGMENTS: Segment[] = [
-  { action: "new", label: "New", icon: "plus", startAngle: 0, endAngle: 90 },
-  { action: "clone", label: "Clone", icon: "copy", startAngle: 90, endAngle: 180 },
-  { action: "close", label: "Close", icon: "close", startAngle: 180, endAngle: 270 },
-  { action: "expand", label: "Expand", icon: "expand", startAngle: 270, endAngle: 360 },
+  // All segments are equal size (72° each)
+  // Top row (left to right): Close, Expand, New
+  { action: "close", label: "Close", icon: "close", startAngle: 252, endAngle: 324 },
+  { action: "expand", label: "Expand", icon: "expand", startAngle: 324, endAngle: 36 },
+  { action: "new", label: "New", icon: "plus", startAngle: 36, endAngle: 108 },
+  // Bottom row (left to right): History, Clone
+  { action: "history", label: "History", icon: "history", startAngle: 180, endAngle: 252 },
+  { action: "clone", label: "Clone", icon: "copy", startAngle: 108, endAngle: 180 },
 ]
 
 const INNER_RADIUS = 40

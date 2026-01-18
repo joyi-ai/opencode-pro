@@ -67,6 +67,7 @@ const icons = {
   trash: `<path d="M4.16667 5.83333H15.8333M8.33333 8.75V14.5833M11.6667 8.75V14.5833M5 5.83333L5.83333 16.6667H14.1667L15 5.83333M7.5 5.83333V3.33333H12.5V5.83333" stroke="currentColor" stroke-linecap="square"/>`,
   retry: `<path d="M16.6667 10C16.6667 13.6819 13.6819 16.6667 10 16.6667C6.31811 16.6667 3.33333 13.6819 3.33333 10C3.33333 6.31811 6.31811 3.33333 10 3.33333C12.5 3.33333 14.6667 4.75 15.8333 6.875M15.8333 3.33333V7.08333H12.0833" stroke="currentColor" stroke-linecap="square"/>`,
   revert: `<path d="M5.83333 6.66667L2.5 10L5.83333 13.3333M2.91667 10H11.6667C14.4281 10 16.6667 12.2386 16.6667 15" stroke="currentColor" stroke-linecap="square"/>`,
+  history: `<path d="M3.33333 10C3.33333 6.31811 6.31811 3.33333 10 3.33333C13.6819 3.33333 16.6667 6.31811 16.6667 10C16.6667 13.6819 13.6819 16.6667 10 16.6667C6.31811 16.6667 3.33333 13.6819 3.33333 10Z" stroke="currentColor" stroke-linecap="square"/><path d="M10 5.83333V10L12.5 12.5" stroke="currentColor" stroke-linecap="square"/><path d="M4.16667 3.33333V7.08333H7.91667" stroke="currentColor" stroke-linecap="square"/>`,
 }
 
 export interface IconProps extends ComponentProps<"svg"> {
