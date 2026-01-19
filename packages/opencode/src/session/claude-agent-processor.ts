@@ -591,6 +591,27 @@ export namespace ClaudeAgentProcessor {
           cost: msg.total_cost_usd,
           turns: msg.num_turns,
         })
+
+        // For slash commands and other direct results, the output is in msg.result
+        // Only process if there's result text and we haven't already displayed it via streaming
+        const resultMsg = msg as { result?: string; subtype: string }
+        if (resultMsg.result && resultMsg.result.trim()) {
+          // Check if we already have this content from streaming
+          const existingStreamedText = Array.from(ctx.streamingParts.values()).find(
+            (p) => p.type === "text" && p.text === resultMsg.result,
+          )
+          if (!existingStreamedText) {
+            const textPart: MessageV2.TextPart = {
+              id: Identifier.ascending("part"),
+              sessionID: ctx.sessionID,
+              messageID: ctx.messageID,
+              type: "text",
+              text: resultMsg.result,
+              time: { start: Date.now() },
+            }
+            await Session.updatePart(textPart)
+          }
+        }
         break
       }
 

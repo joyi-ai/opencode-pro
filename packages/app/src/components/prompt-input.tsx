@@ -57,7 +57,6 @@ import {
   CODEX_SLASH_DISABLED,
   CODEX_SLASH_HIDDEN,
   CODEX_SLASH_INSERT_TRIGGERS,
-  CLAUDE_CODE_SLASH_COMMANDS,
   CLAUDE_CODE_SLASH_COMMANDS_BY_TRIGGER,
   type CodexSlashAction,
   type NestedOption,
@@ -705,7 +704,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const claudeCommandTriggers = createMemo(() => {
     if (!isClaudeCodeMode()) return new Set<string>()
-    return new Set((claudeCommands() ?? []).map((cmd) => cmd.name))
+    // Only use dynamic triggers from SDK - these are the actually supported commands
+    const dynamicTriggers = (claudeCommands() ?? []).map((cmd) => cmd.name)
+    return new Set(dynamicTriggers)
   })
 
   const slashCommands = createMemo<SlashCommand[]>(() => {
@@ -721,20 +722,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         }))
       : []
 
-    // Use static Claude Code commands definition (with fallback to dynamic if available)
+    // Use dynamic SDK commands as base, enhanced with nested options from static config
+    const dynamicClaude = claudeCommands() ?? []
     const claudeCodeCommands = isClaudeCodeMode()
-      ? CLAUDE_CODE_SLASH_COMMANDS.map((cmd) => ({
-          id: `claude-code.${cmd.trigger}`,
-          trigger: cmd.trigger,
-          title: cmd.title,
-          description: cmd.description,
-          type: "claude-code" as const,
-        }))
+      ? dynamicClaude.map((cmd) => {
+          // Check if this command has nested options defined in static config
+          const staticCmd = CLAUDE_CODE_SLASH_COMMANDS_BY_TRIGGER.get(cmd.name)
+          return {
+            id: `claude-code.${cmd.name}`,
+            trigger: cmd.name,
+            title: staticCmd?.title ?? cmd.name,
+            description: cmd.description ?? staticCmd?.description ?? "",
+            type: "claude-code" as const,
+          }
+        })
       : []
 
     const blockedTriggers = new Set([
       ...(isCodexMode ? Array.from(CODEX_SLASH_DISABLED) : []),
-      ...(isClaudeCodeMode() ? CLAUDE_CODE_SLASH_COMMANDS.map((cmd) => cmd.trigger) : []),
       ...Array.from(claudeCommandTriggers()),
     ])
 
@@ -872,21 +877,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   // Load dynamic options based on loaderId
   const loadDynamicOptions = async (
-    loaderId:
-      | "branches"
-      | "commits"
-      | "sessions"
-      | "models"
-      | "themes"
-      | "agents"
-      | "mcp-servers"
-      | "plugins"
-      | "hooks"
-      | "ides"
-      | "bashes"
-      | "memory-files"
-      | "output-styles"
-      | "rewind-points",
+    loaderId: "branches" | "commits",
     trigger: string,
   ): Promise<NestedOption[]> => {
     const baseUrl = sdk.url
@@ -920,137 +911,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       } catch {
         return []
       }
-    }
-
-    if (loaderId === "sessions") {
-      try {
-        const response = await fetchFn(`${baseUrl}/session?limit=20`, { headers })
-        const data = (await response.json()) as { data?: Array<{ id: string; title?: string; createdAt: string }> }
-        return (data.data ?? []).map((s) => ({
-          id: `session-${s.id}`,
-          label: s.title || `Session ${s.id.slice(0, 8)}`,
-          description: new Date(s.createdAt).toLocaleString(),
-          result: `/${trigger} ${s.id}`,
-        }))
-      } catch {
-        return []
-      }
-    }
-
-    if (loaderId === "models") {
-      const models = local.model.list()
-      return models.map((m) => ({
-        id: `model-${m.id}`,
-        label: m.name,
-        description: m.provider?.name ?? "",
-        result: `/${trigger} ${m.id}`,
-      }))
-    }
-
-    if (loaderId === "themes") {
-      try {
-        const response = await fetchFn(`${baseUrl}/theme`, { headers })
-        const data = (await response.json()) as { data?: string[] }
-        return (data.data ?? ["dark", "light", "auto"]).map((t) => ({
-          id: `theme-${t}`,
-          label: t,
-          result: `/${trigger} ${t}`,
-        }))
-      } catch {
-        return ["dark", "light", "auto"].map((t) => ({ id: `theme-${t}`, label: t, result: `/${trigger} ${t}` }))
-      }
-    }
-
-    if (loaderId === "output-styles") {
-      const styles = ["concise", "normal", "verbose", "streaming"]
-      return styles.map((s) => ({
-        id: `style-${s}`,
-        label: s.charAt(0).toUpperCase() + s.slice(1),
-        result: `/${trigger} ${s}`,
-      }))
-    }
-
-    if (loaderId === "agents") {
-      try {
-        const response = await fetchFn(`${baseUrl}/agent`, { headers })
-        const data = (await response.json()) as { data?: Array<{ name: string; description?: string }> }
-        return (data.data ?? []).map((a) => ({
-          id: `agent-${a.name}`,
-          label: a.name,
-          description: a.description,
-          result: `/${trigger} ${a.name}`,
-        }))
-      } catch {
-        return []
-      }
-    }
-
-    if (loaderId === "mcp-servers") {
-      try {
-        const response = await fetchFn(`${baseUrl}/mcp/servers`, { headers })
-        const data = (await response.json()) as { data?: Array<{ name: string; status?: string }> }
-        return (data.data ?? []).map((s) => ({
-          id: `mcp-${s.name}`,
-          label: s.name,
-          description: s.status ?? "unknown",
-          result: `/${trigger} ${s.name}`,
-        }))
-      } catch {
-        return []
-      }
-    }
-
-    if (loaderId === "plugins") {
-      try {
-        const response = await fetchFn(`${baseUrl}/plugin`, { headers })
-        const data = (await response.json()) as { data?: Array<{ name: string; enabled?: boolean }> }
-        return (data.data ?? []).map((p) => ({
-          id: `plugin-${p.name}`,
-          label: p.name,
-          description: p.enabled ? "enabled" : "disabled",
-          result: `/${trigger} ${p.name}`,
-        }))
-      } catch {
-        return []
-      }
-    }
-
-    if (loaderId === "hooks") {
-      const hookTypes = ["PreToolUse", "PostToolUse", "Notification", "SessionStart", "SessionEnd"]
-      return hookTypes.map((h) => ({ id: `hook-${h}`, label: h, result: `/${trigger} ${h}` }))
-    }
-
-    if (loaderId === "ides") {
-      const ides = ["vscode", "cursor", "windsurf", "zed"]
-      return ides.map((i) => ({
-        id: `ide-${i}`,
-        label: i.charAt(0).toUpperCase() + i.slice(1),
-        result: `/${trigger} ${i}`,
-      }))
-    }
-
-    if (loaderId === "bashes") {
-      try {
-        const response = await fetchFn(`${baseUrl}/bash/background`, { headers })
-        const data = (await response.json()) as { data?: Array<{ id: string; command?: string; status?: string }> }
-        return (data.data ?? []).map((b) => ({
-          id: `bash-${b.id}`,
-          label: b.command?.slice(0, 50) || b.id,
-          description: b.status,
-          result: `/${trigger} ${b.id}`,
-        }))
-      } catch {
-        return []
-      }
-    }
-
-    if (loaderId === "memory-files") {
-      const files = ["CLAUDE.md", ".claude/settings.json", ".claude/settings.local.json"]
-      return files.map((f) => ({ id: `memory-${f}`, label: f, result: `/${trigger} ${f}` }))
-    }
-
-    if (loaderId === "rewind-points") {
-      return [{ id: "rewind-last", label: "Last message", description: "Rewind to previous message", result: `/${trigger}` }]
     }
 
     return []

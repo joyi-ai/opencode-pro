@@ -22,21 +22,7 @@ export type NestedOptionView =
   | {
       type: "dynamic"
       title: string
-      loaderId:
-        | "branches"
-        | "commits"
-        | "sessions"
-        | "models"
-        | "themes"
-        | "agents"
-        | "mcp-servers"
-        | "plugins"
-        | "hooks"
-        | "ides"
-        | "bashes"
-        | "memory-files"
-        | "output-styles"
-        | "rewind-points"
+      loaderId: "branches" | "commits"
       searchable?: boolean
     }
   | { type: "input"; title: string; placeholder: string }
@@ -173,42 +159,28 @@ export const CODEX_SLASH_INSERT_TRIGGERS = new Set(
 )
 export const CODEX_SLASH_DISABLED = new Set([...CODEX_SLASH_COMMAND_TRIGGERS, ...CODEX_SLASH_HIDDEN])
 
+// Claude Code slash command action types
+export type ClaudeCodeSlashAction =
+  | { kind: "command"; id: string } // Trigger a UI command
+  | { kind: "api"; endpoint: string; method?: "GET" | "POST" } // Call an API endpoint
+  | { kind: "summarize" } // Compact the conversation
+  | { kind: "clear" } // Clear the conversation
+  | { kind: "settings" } // Open settings
+  | { kind: "prompt" } // Send as a prompt to Claude Code (default behavior)
+
 // Claude Code slash command - full definition similar to CodexSlashCommand
 type ClaudeCodeSlashCommand = {
   trigger: string
   title: string
   description: string
+  action?: ClaudeCodeSlashAction
   nested?: NestedOptionView
 }
 
+// Only define commands that have nested options to enhance them
+// AND are supported by the Claude Agent SDK's supportedCommands()
+// SDK Supported (as of test): compact, context, cost, init, pr-comments, release-notes, review, security-review
 export const CLAUDE_CODE_SLASH_COMMANDS: ClaudeCodeSlashCommand[] = [
-  // === Simple Commands (no nested options) ===
-  { trigger: "clear", title: "Clear", description: "clear conversation history" },
-  { trigger: "config", title: "Config", description: "open the Settings interface" },
-  { trigger: "context", title: "Context", description: "visualize current context usage" },
-  { trigger: "cost", title: "Cost", description: "show token usage statistics" },
-  { trigger: "doctor", title: "Doctor", description: "check installation health" },
-  { trigger: "exit", title: "Exit", description: "exit the REPL" },
-  { trigger: "help", title: "Help", description: "get usage help" },
-  { trigger: "init", title: "Init", description: "initialize project with CLAUDE.md" },
-  { trigger: "install-github-app", title: "Install GitHub App", description: "setup Claude GitHub Actions" },
-  { trigger: "login", title: "Login", description: "switch Anthropic accounts" },
-  { trigger: "logout", title: "Logout", description: "sign out from your account" },
-  { trigger: "plan", title: "Plan", description: "enter plan mode" },
-  { trigger: "pr-comments", title: "PR Comments", description: "view pull request comments" },
-  { trigger: "privacy-settings", title: "Privacy Settings", description: "update privacy settings" },
-  { trigger: "release-notes", title: "Release Notes", description: "view release notes" },
-  { trigger: "remote-env", title: "Remote Env", description: "configure remote environment" },
-  { trigger: "sandbox", title: "Sandbox", description: "enable sandboxed bash tool" },
-  { trigger: "security-review", title: "Security Review", description: "complete security review of pending changes" },
-  { trigger: "stats", title: "Stats", description: "visualize daily usage and session history" },
-  { trigger: "status", title: "Status", description: "show version, model, account info" },
-  { trigger: "statusline", title: "Statusline", description: "setup status line UI" },
-  { trigger: "todos", title: "Todos", description: "list current TODO items" },
-  { trigger: "usage", title: "Usage", description: "show plan usage limits" },
-  { trigger: "vim", title: "Vim", description: "enter vim mode" },
-
-  // === Commands with Nested Options ===
   // === Code Review ===
   {
     trigger: "review",
@@ -261,173 +233,6 @@ export const CLAUDE_CODE_SLASH_COMMANDS: ClaudeCodeSlashCommand[] = [
           label: "Compact with focus",
           description: "Summarize with focus instructions",
           nested: { type: "input", title: "Focus instructions", placeholder: "What aspects to preserve..." },
-        },
-      ],
-    },
-  },
-  {
-    trigger: "resume",
-    title: "Resume",
-    description: "resume a previous conversation",
-    nested: { type: "dynamic", title: "Select session to resume", loaderId: "sessions", searchable: true },
-  },
-  {
-    trigger: "rename",
-    title: "Rename",
-    description: "rename the current session",
-    nested: { type: "input", title: "Rename session", placeholder: "Enter new session name..." },
-  },
-  {
-    trigger: "rewind",
-    title: "Rewind",
-    description: "rewind conversation and/or code",
-    nested: { type: "dynamic", title: "Select rewind point", loaderId: "rewind-points", searchable: false },
-  },
-  {
-    trigger: "teleport",
-    title: "Teleport",
-    description: "resume a remote session from claude.ai",
-    nested: { type: "dynamic", title: "Select remote session", loaderId: "sessions", searchable: true },
-  },
-
-  // === Model & Output ===
-  {
-    trigger: "model",
-    title: "Model",
-    description: "select or change the AI model",
-    nested: { type: "dynamic", title: "Select model", loaderId: "models", searchable: true },
-  },
-  {
-    trigger: "output-style",
-    title: "Output Style",
-    description: "set the output style",
-    nested: { type: "dynamic", title: "Select output style", loaderId: "output-styles", searchable: false },
-  },
-  {
-    trigger: "theme",
-    title: "Theme",
-    description: "change the color theme",
-    nested: { type: "dynamic", title: "Select theme", loaderId: "themes", searchable: true },
-  },
-
-  // === Project & Config ===
-  {
-    trigger: "add-dir",
-    title: "Add Dir",
-    description: "add additional working directories",
-    nested: { type: "input", title: "Add directory", placeholder: "Enter directory path..." },
-  },
-  {
-    trigger: "memory",
-    title: "Memory",
-    description: "edit CLAUDE.md memory files",
-    nested: { type: "dynamic", title: "Select memory file", loaderId: "memory-files", searchable: true },
-  },
-  {
-    trigger: "export",
-    title: "Export",
-    description: "export the current conversation",
-    nested: {
-      type: "static",
-      title: "Export options",
-      options: [
-        { id: "export-clipboard", label: "Copy to clipboard", description: "Export to clipboard", result: "/export clipboard" },
-        { id: "export-markdown", label: "Export as Markdown", description: "Save as .md file", result: "/export conversation.md" },
-        {
-          id: "export-custom",
-          label: "Custom filename",
-          description: "Specify filename",
-          nested: { type: "input", title: "Enter filename", placeholder: "filename.md" },
-        },
-      ],
-    },
-  },
-
-  // === Integrations ===
-  {
-    trigger: "agents",
-    title: "Agents",
-    description: "manage custom AI subagents",
-    nested: { type: "dynamic", title: "Select agent", loaderId: "agents", searchable: true },
-  },
-  {
-    trigger: "mcp",
-    title: "MCP",
-    description: "manage MCP server connections",
-    nested: { type: "dynamic", title: "Select MCP server", loaderId: "mcp-servers", searchable: true },
-  },
-  {
-    trigger: "plugin",
-    title: "Plugin",
-    description: "manage Claude Code plugins",
-    nested: { type: "dynamic", title: "Select plugin", loaderId: "plugins", searchable: true },
-  },
-  {
-    trigger: "hooks",
-    title: "Hooks",
-    description: "manage hook configurations",
-    nested: { type: "dynamic", title: "Select hook", loaderId: "hooks", searchable: true },
-  },
-  {
-    trigger: "ide",
-    title: "IDE",
-    description: "manage IDE integrations",
-    nested: { type: "dynamic", title: "Select IDE", loaderId: "ides", searchable: false },
-  },
-  {
-    trigger: "bashes",
-    title: "Bashes",
-    description: "list and manage background tasks",
-    nested: { type: "dynamic", title: "Select background task", loaderId: "bashes", searchable: false },
-  },
-
-  // === Permissions ===
-  {
-    trigger: "permissions",
-    title: "Permissions",
-    description: "view or update permissions",
-    nested: {
-      type: "static",
-      title: "Permission actions",
-      options: [
-        { id: "permissions-view", label: "View permissions", description: "Show current permissions", result: "/permissions" },
-        { id: "permissions-reset", label: "Reset permissions", description: "Reset to defaults", result: "/permissions reset" },
-      ],
-    },
-  },
-
-  // === Setup ===
-  {
-    trigger: "terminal-setup",
-    title: "Terminal Setup",
-    description: "install Shift+Enter key binding",
-    nested: {
-      type: "static",
-      title: "Select terminal",
-      options: [
-        { id: "terminal-vscode", label: "VS Code", description: "Install for VS Code terminal", result: "/terminal-setup vscode" },
-        { id: "terminal-alacritty", label: "Alacritty", description: "Install for Alacritty", result: "/terminal-setup alacritty" },
-        { id: "terminal-zed", label: "Zed", description: "Install for Zed", result: "/terminal-setup zed" },
-        { id: "terminal-warp", label: "Warp", description: "Install for Warp", result: "/terminal-setup warp" },
-      ],
-    },
-  },
-
-  // === Bug Reporting ===
-  {
-    trigger: "bug",
-    title: "Bug",
-    description: "report bugs to Anthropic",
-    nested: {
-      type: "static",
-      title: "Report a bug",
-      options: [
-        { id: "bug-report", label: "Report current issue", description: "File bug report with context", result: "/bug" },
-        {
-          id: "bug-describe",
-          label: "Describe the bug",
-          description: "Enter a description",
-          nested: { type: "input", title: "Bug description", placeholder: "Describe the issue..." },
         },
       ],
     },
