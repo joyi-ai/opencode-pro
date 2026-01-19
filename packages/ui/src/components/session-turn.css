@@ -446,7 +446,7 @@
   }
 
   [data-slot="session-turn-task-agent"][data-done="true"] [data-slot="session-turn-task-agent-text"] {
-    color: var(--text-weak);
+    color: var(--color-green);
   }
 
   [data-slot="session-turn-steps-section"] {

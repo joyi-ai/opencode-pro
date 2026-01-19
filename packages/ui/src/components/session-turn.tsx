@@ -737,8 +737,7 @@ export function SessionTurn(
       const toolLabel = childToolName ? formatToolLabel(childToolName, toolInput, toolTitle) : undefined
       const fallbackStatus = computeStatusFromPart(childPart)
       const useToolLabel = !input?.command
-      const current = (useToolLabel ? toolLabel : undefined) ?? fallbackStatus ?? "Thinking"
-      const status = done ? "Done" : current
+      const status = (useToolLabel ? toolLabel : undefined) ?? fallbackStatus ?? ""
 
       result.push({ id: part.id, name: name.charAt(0).toUpperCase() + name.slice(1), status, done })
     }
@@ -1282,7 +1281,7 @@ export function SessionTurn(
                                   {(agent) => (
                                     <div data-slot="session-turn-task-agent" data-done={agent().done ? "true" : "false"}>
                                       <span data-slot="session-turn-task-agent-text">
-                                        {agent().name}: {agent().status}
+                                        {agent().status ? `${agent().name}: ${agent().status}` : agent().name}
                                       </span>
                                     </div>
                                   )}
