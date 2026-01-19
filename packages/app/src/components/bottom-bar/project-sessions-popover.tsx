@@ -173,35 +173,37 @@ function SessionItem(props: { session: Session; directory: string; onArchive?: (
                 <div class="size-1.5 mr-1.5 rounded-full bg-text-interactive-base" />
               </Show>
               <Show when={!isWorking() && !hasPermissions() && !hasError() && notifications().length === 0}>
-                <span class="text-11-regular text-text-weak text-right whitespace-nowrap group-hover/session:hidden">{relative()}</span>
-              </Show>
-              <Show when={props.archived}>
-                <Tooltip placement="top" value="Unarchive session">
-                  <button
-                    type="button"
-                    onClick={unarchiveSession}
-                    class="hidden group-hover/session:flex items-center justify-center size-5 rounded hover:bg-surface-raised-base-active"
-                    disabled={archiving()}
-                  >
-                    <Show when={archiving()} fallback={<Icon name="revert" size="small" class="text-icon-base" />}>
-                      <Spinner class="size-2.5" />
-                    </Show>
-                  </button>
-                </Tooltip>
-              </Show>
-              <Show when={!props.archived}>
-                <Tooltip placement="top" value="Archive session">
-                  <button
-                    type="button"
-                    onClick={archiveSession}
-                    class="hidden group-hover/session:flex items-center justify-center size-5 rounded hover:bg-surface-raised-base-active"
-                    disabled={archiving()}
-                  >
-                    <Show when={archiving()} fallback={<Icon name="archive" size="small" class="text-icon-base" />}>
-                      <Spinner class="size-2.5" />
-                    </Show>
-                  </button>
-                </Tooltip>
+                <div class="relative flex items-center justify-end min-w-5">
+                  <span class="text-11-regular text-text-weak text-right whitespace-nowrap group-hover/session:opacity-0">{relative()}</span>
+                  <Show when={props.archived}>
+                    <Tooltip placement="top" value="Unarchive session">
+                      <button
+                        type="button"
+                        onClick={unarchiveSession}
+                        class="absolute right-0 opacity-0 group-hover/session:opacity-100 flex items-center justify-center size-5 rounded hover:bg-surface-raised-base-active"
+                        disabled={archiving()}
+                      >
+                        <Show when={archiving()} fallback={<Icon name="revert" size="small" class="text-icon-base" />}>
+                          <Spinner class="size-2.5" />
+                        </Show>
+                      </button>
+                    </Tooltip>
+                  </Show>
+                  <Show when={!props.archived}>
+                    <Tooltip placement="top" value="Archive session">
+                      <button
+                        type="button"
+                        onClick={archiveSession}
+                        class="absolute right-0 opacity-0 group-hover/session:opacity-100 flex items-center justify-center size-5 rounded hover:bg-surface-raised-base-active"
+                        disabled={archiving()}
+                      >
+                        <Show when={archiving()} fallback={<Icon name="archive" size="small" class="text-icon-base" />}>
+                          <Spinner class="size-2.5" />
+                        </Show>
+                      </button>
+                    </Tooltip>
+                  </Show>
+                </div>
               </Show>
             </div>
           </div>
