@@ -1,10 +1,11 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, Show, type ParentProps } from "solid-js"
-import { A, useParams } from "@solidjs/router"
+import { A, useParams, useNavigate } from "@solidjs/router"
 import { DateTime } from "luxon"
 import { Popover as Kobalte } from "@kobalte/core/popover"
 import { useGlobalSync } from "@/context/global-sync"
+import { useGlobalSDK } from "@/context/global-sdk"
 import { useNotification } from "@/context/notification"
-import { type LocalProject } from "@/context/layout"
+import { useLayout, type LocalProject } from "@/context/layout"
 import { base64Decode, base64Encode } from "@opencode-ai/util/encode"
 import { getFilename } from "@opencode-ai/util/path"
 import { normalizeDirectoryKey } from "@/utils/directory"
@@ -15,7 +16,8 @@ import { Collapsible } from "@opencode-ai/ui/collapsible"
 import { DiffChanges } from "@opencode-ai/ui/diff-changes"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { Button } from "@opencode-ai/ui/button"
-import type { Session } from "@opencode-ai/sdk/v2/client"
+import { createOpencodeClient, type Session } from "@opencode-ai/sdk/v2/client"
+import { usePlatform } from "@/context/platform"
 
 type Props = ParentProps<{
   project: LocalProject
@@ -38,11 +40,15 @@ function sortSessions(a: Session, b: Session) {
   return bUpdated - aUpdated
 }
 
-function SessionItem(props: { session: Session; directory: string }) {
+function SessionItem(props: { session: Session; directory: string; onArchive?: (sessionID: string) => void; archived?: boolean }) {
   const params = useParams()
   const notification = useNotification()
   const globalSync = useGlobalSync()
+  const globalSdk = useGlobalSDK()
+  const platform = usePlatform()
+  const navigate = useNavigate()
   const [relative, setRelative] = createSignal("")
+  const [archiving, setArchiving] = createSignal(false)
 
   const formatRelative = (value: number | undefined) => {
     if (!value) return ""
@@ -96,6 +102,45 @@ function SessionItem(props: { session: Session; directory: string }) {
 
   const sessionHref = createMemo(() => `/${base64Encode(props.directory)}/session/${props.session.id}`)
 
+  const archiveSession = async (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (archiving()) return
+    setArchiving(true)
+    const sdk = createOpencodeClient({
+      baseUrl: globalSdk.url,
+      directory: props.directory,
+      fetch: platform.fetch,
+    })
+    await sdk.session.update({
+      sessionID: props.session.id,
+      time: { archived: Date.now() },
+    })
+    setArchiving(false)
+    props.onArchive?.(props.session.id)
+    if (isActive()) {
+      navigate(`/${base64Encode(props.directory)}/session`)
+    }
+  }
+
+  const unarchiveSession = async (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (archiving()) return
+    setArchiving(true)
+    const sdk = createOpencodeClient({
+      baseUrl: globalSdk.url,
+      directory: props.directory,
+      fetch: platform.fetch,
+    })
+    await sdk.session.update({
+      sessionID: props.session.id,
+      time: { archived: 0 },
+    })
+    setArchiving(false)
+    props.onArchive?.(props.session.id)
+  }
+
   return (
     <div
       data-session-id={props.session.id}
@@ -114,7 +159,7 @@ function SessionItem(props: { session: Session; directory: string }) {
             >
               {props.session.title}
             </span>
-            <div class="shrink-0">
+            <div class="shrink-0 flex items-center gap-1">
               <Show when={isWorking()}>
                 <Spinner class="size-2.5 mr-0.5" />
               </Show>
@@ -128,7 +173,35 @@ function SessionItem(props: { session: Session; directory: string }) {
                 <div class="size-1.5 mr-1.5 rounded-full bg-text-interactive-base" />
               </Show>
               <Show when={!isWorking() && !hasPermissions() && !hasError() && notifications().length === 0}>
-                <span class="text-11-regular text-text-weak text-right whitespace-nowrap">{relative()}</span>
+                <span class="text-11-regular text-text-weak text-right whitespace-nowrap group-hover/session:hidden">{relative()}</span>
+              </Show>
+              <Show when={props.archived}>
+                <Tooltip placement="top" value="Unarchive session">
+                  <button
+                    type="button"
+                    onClick={unarchiveSession}
+                    class="hidden group-hover/session:flex items-center justify-center size-5 rounded hover:bg-surface-raised-base-active"
+                    disabled={archiving()}
+                  >
+                    <Show when={archiving()} fallback={<Icon name="revert" size="small" class="text-icon-base" />}>
+                      <Spinner class="size-2.5" />
+                    </Show>
+                  </button>
+                </Tooltip>
+              </Show>
+              <Show when={!props.archived}>
+                <Tooltip placement="top" value="Archive session">
+                  <button
+                    type="button"
+                    onClick={archiveSession}
+                    class="hidden group-hover/session:flex items-center justify-center size-5 rounded hover:bg-surface-raised-base-active"
+                    disabled={archiving()}
+                  >
+                    <Show when={archiving()} fallback={<Icon name="archive" size="small" class="text-icon-base" />}>
+                      <Spinner class="size-2.5" />
+                    </Show>
+                  </button>
+                </Tooltip>
               </Show>
             </div>
           </div>
@@ -151,8 +224,14 @@ function WorktreeSection(props: {
   project: LocalProject
 }) {
   const globalSync = useGlobalSync()
+  const globalSdk = useGlobalSDK()
+  const platform = usePlatform()
   const [store, setProjectStore] = globalSync.child(props.directory)
   const [expanded, setExpanded] = createSignal(props.isMain)
+  const [archivedExpanded, setArchivedExpanded] = createSignal(false)
+  const [archivedSessions, setArchivedSessions] = createSignal<Session[]>([])
+  const [loadingArchived, setLoadingArchived] = createSignal(false)
+  const [archivedLoaded, setArchivedLoaded] = createSignal(false)
 
   const sessions = createMemo(() =>
     store.session
@@ -165,6 +244,37 @@ function WorktreeSection(props: {
   const loadMoreSessions = async () => {
     setProjectStore("limit", (limit) => limit + 5)
     await globalSync.project.loadSessions(props.directory)
+  }
+
+  const loadArchivedSessions = async () => {
+    if (archivedLoaded() || loadingArchived()) return
+    setLoadingArchived(true)
+    const sdk = createOpencodeClient({
+      baseUrl: globalSdk.url,
+      directory: props.directory,
+      fetch: platform.fetch,
+    })
+    const response = await sdk.session.list({ limit: 100 })
+    const archived = (response.data ?? [])
+      .filter((s) => s.time?.archived && !s.parentID && sameDirectory(s.directory, props.directory))
+      .toSorted(sortSessions)
+    setArchivedSessions(archived)
+    setLoadingArchived(false)
+    setArchivedLoaded(true)
+  }
+
+  const handleArchivedExpandChange = (open: boolean) => {
+    setArchivedExpanded(open)
+    if (open && !archivedLoaded()) {
+      loadArchivedSessions()
+    }
+  }
+
+  const handleArchiveChange = () => {
+    setArchivedLoaded(false)
+    if (archivedExpanded()) {
+      loadArchivedSessions()
+    }
   }
 
   const newSessionHref = createMemo(() => `/${base64Encode(props.directory)}/session`)
@@ -182,7 +292,7 @@ function WorktreeSection(props: {
       <Collapsible.Content class="pl-2">
         <div class="flex flex-col gap-1">
           <For each={sessions()}>
-            {(session) => <SessionItem session={session} directory={props.directory} />}
+            {(session) => <SessionItem session={session} directory={props.directory} onArchive={handleArchiveChange} />}
           </For>
         </div>
         <Show when={sessions().length === 0}>
@@ -203,6 +313,34 @@ function WorktreeSection(props: {
             Load more
           </Button>
         </Show>
+        <Collapsible open={archivedExpanded()} onOpenChange={handleArchivedExpandChange} variant="ghost" class="w-full mt-1">
+          <Collapsible.Trigger class="group/archived-trigger flex items-center gap-2 w-full px-2 py-1 rounded-md hover:bg-surface-raised-base-hover cursor-pointer">
+            <Icon
+              name="chevron-right"
+              size="small"
+              class="text-icon-weak transition-transform group-data-[expanded]/archived-trigger:rotate-90"
+            />
+            <Icon name="archive" size="small" class="text-icon-weak" />
+            <span class="text-11-medium text-text-weak flex-1 text-left">Archived</span>
+          </Collapsible.Trigger>
+          <Collapsible.Content class="pl-2">
+            <Show when={loadingArchived()}>
+              <div class="flex items-center justify-center py-2">
+                <Spinner class="size-4" />
+              </div>
+            </Show>
+            <Show when={!loadingArchived() && archivedSessions().length === 0}>
+              <div class="px-3 py-1.5 text-11-regular text-text-weak">No archived sessions</div>
+            </Show>
+            <Show when={!loadingArchived() && archivedSessions().length > 0}>
+              <div class="flex flex-col gap-1">
+                <For each={archivedSessions()}>
+                  {(session) => <SessionItem session={session} directory={props.directory} archived onArchive={handleArchiveChange} />}
+                </For>
+              </div>
+            </Show>
+          </Collapsible.Content>
+        </Collapsible>
       </Collapsible.Content>
     </Collapsible>
   )
@@ -210,9 +348,33 @@ function WorktreeSection(props: {
 
 export function ProjectSessionsPopover(props: Props) {
   const globalSync = useGlobalSync()
+  const layout = useLayout()
+  const navigate = useNavigate()
+  const params = useParams()
   const [open, setOpen] = createSignal(false)
+  const [confirmRemove, setConfirmRemove] = createSignal(false)
   let contentRef: HTMLDivElement | undefined
   let triggerRef: HTMLDivElement | undefined
+
+  const handleCloseProject = () => {
+    if (!confirmRemove()) {
+      setConfirmRemove(true)
+      return
+    }
+    const currentDir = params.dir ? base64Decode(params.dir) : undefined
+    const isSameProject = sameDirectory(currentDir, props.project.worktree)
+    layout.projects.close(props.project.worktree)
+    setOpen(false)
+    setConfirmRemove(false)
+    if (isSameProject) {
+      const otherProjects = layout.projects.list().filter((p) => !sameDirectory(p.worktree, props.project.worktree))
+      if (otherProjects.length > 0) {
+        navigate(`/${base64Encode(otherProjects[0].worktree)}/session`)
+      } else {
+        navigate("/")
+      }
+    }
+  }
 
   const worktrees = createMemo(() => {
     const main = { directory: props.project.worktree, label: "main", isMain: true }
@@ -231,7 +393,10 @@ export function ProjectSessionsPopover(props: Props) {
   })
 
   createEffect(() => {
-    if (!open()) return
+    if (!open()) {
+      setConfirmRemove(false)
+      return
+    }
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node
       if (contentRef?.contains(target)) return
@@ -254,7 +419,17 @@ export function ProjectSessionsPopover(props: Props) {
               <Icon name="history" size="small" class="text-icon-base" />
               <span class="text-13-medium text-text-strong">Sessions</span>
             </div>
-            <Kobalte.CloseButton as={IconButton} icon="close" variant="ghost" />
+            <div class="flex items-center gap-1">
+              <Tooltip placement="top" value={confirmRemove() ? "Click again to confirm" : "Remove project from sidebar"}>
+                <IconButton
+                  icon="trash"
+                  variant="ghost"
+                  onClick={handleCloseProject}
+                  class={confirmRemove() ? "text-text-critical-base" : ""}
+                />
+              </Tooltip>
+              <Kobalte.CloseButton as={IconButton} icon="close" variant="ghost" />
+            </div>
           </div>
           <div class="max-h-80 overflow-y-auto flex flex-col gap-1">
             <For each={worktrees()}>
