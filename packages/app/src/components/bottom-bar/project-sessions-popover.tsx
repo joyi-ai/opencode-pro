@@ -12,7 +12,6 @@ import { normalizeDirectoryKey } from "@/utils/directory"
 import { Icon } from "@opencode-ai/ui/icon"
 import { IconButton } from "@opencode-ai/ui/icon-button"
 import { Spinner } from "@opencode-ai/ui/spinner"
-import { Collapsible } from "@opencode-ai/ui/collapsible"
 import { DiffChanges } from "@opencode-ai/ui/diff-changes"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { Button } from "@opencode-ai/ui/button"
@@ -219,23 +218,27 @@ function SessionItem(props: { session: Session; directory: string; onArchive?: (
   )
 }
 
-function WorktreeSection(props: {
+type TabInfo = {
+  id: string
   directory: string
   label: string
-  isMain: boolean
-  project: LocalProject
+  isArchived: boolean
+}
+
+function SessionsList(props: {
+  directory: string
+  isArchived: boolean
+  onArchiveChange: () => void
 }) {
   const globalSync = useGlobalSync()
   const globalSdk = useGlobalSDK()
   const platform = usePlatform()
   const [store, setProjectStore] = globalSync.child(props.directory)
-  const [expanded, setExpanded] = createSignal(props.isMain)
-  const [archivedExpanded, setArchivedExpanded] = createSignal(false)
   const [archivedSessions, setArchivedSessions] = createSignal<Session[]>([])
   const [loadingArchived, setLoadingArchived] = createSignal(false)
   const [archivedLoaded, setArchivedLoaded] = createSignal(false)
 
-  const sessions = createMemo(() =>
+  const activeSessions = createMemo(() =>
     store.session
       .filter((s) => !s.parentID && !s.time?.archived && sameDirectory(s.directory, props.directory))
       .toSorted(sortSessions),
@@ -265,16 +268,16 @@ function WorktreeSection(props: {
     setArchivedLoaded(true)
   }
 
-  const handleArchivedExpandChange = (open: boolean) => {
-    setArchivedExpanded(open)
-    if (open && !archivedLoaded()) {
+  createEffect(() => {
+    if (props.isArchived && !archivedLoaded()) {
       loadArchivedSessions()
     }
-  }
+  })
 
   const handleArchiveChange = () => {
     setArchivedLoaded(false)
-    if (archivedExpanded()) {
+    props.onArchiveChange()
+    if (props.isArchived) {
       loadArchivedSessions()
     }
   }
@@ -282,69 +285,54 @@ function WorktreeSection(props: {
   const newSessionHref = createMemo(() => `/${base64Encode(props.directory)}/session`)
 
   return (
-    <Collapsible open={expanded()} onOpenChange={setExpanded} variant="ghost" class="w-full">
-      <Collapsible.Trigger class="group/trigger flex items-center gap-2 w-full px-2 py-1.5 rounded-md hover:bg-surface-raised-base-hover cursor-pointer">
-        <Icon
-          name="chevron-right"
+    <Show
+      when={!props.isArchived}
+      fallback={
+        <>
+          <Show when={loadingArchived()}>
+            <div class="flex items-center justify-center py-4">
+              <Spinner class="size-4" />
+            </div>
+          </Show>
+          <Show when={!loadingArchived() && archivedSessions().length === 0}>
+            <div class="px-3 py-4 text-12-regular text-text-weak text-center">No archived sessions</div>
+          </Show>
+          <Show when={!loadingArchived() && archivedSessions().length > 0}>
+            <div class="flex flex-col gap-1">
+              <For each={archivedSessions()}>
+                {(session) => (
+                  <SessionItem session={session} directory={props.directory} archived onArchive={handleArchiveChange} />
+                )}
+              </For>
+            </div>
+          </Show>
+        </>
+      }
+    >
+      <div class="flex flex-col gap-1">
+        <For each={activeSessions()}>
+          {(session) => <SessionItem session={session} directory={props.directory} onArchive={handleArchiveChange} />}
+        </For>
+      </div>
+      <Show when={activeSessions().length === 0}>
+        <A
+          href={newSessionHref()}
+          class="block w-full px-3 py-4 text-12-regular text-text-weak hover:bg-surface-raised-base-hover rounded-md text-center"
+        >
+          New session
+        </A>
+      </Show>
+      <Show when={hasMoreSessions()}>
+        <Button
+          variant="ghost"
+          class="w-full text-left justify-start text-11-medium opacity-60 px-3"
           size="small"
-          class="text-icon-base transition-transform group-data-[expanded]/trigger:rotate-90"
-        />
-        <span class="text-12-medium text-text-base flex-1 text-left truncate">{props.label}</span>
-      </Collapsible.Trigger>
-      <Collapsible.Content class="pl-2">
-        <div class="flex flex-col gap-1">
-          <For each={sessions()}>
-            {(session) => <SessionItem session={session} directory={props.directory} onArchive={handleArchiveChange} />}
-          </For>
-        </div>
-        <Show when={sessions().length === 0}>
-          <A
-            href={newSessionHref()}
-            class="block w-full px-3 py-1.5 text-13-regular text-text-weak hover:bg-surface-raised-base-hover rounded-md"
-          >
-            New session
-          </A>
-        </Show>
-        <Show when={hasMoreSessions()}>
-          <Button
-            variant="ghost"
-            class="w-full text-left justify-start text-11-medium opacity-60 px-3"
-            size="small"
-            onClick={loadMoreSessions}
-          >
-            Load more
-          </Button>
-        </Show>
-        <Collapsible open={archivedExpanded()} onOpenChange={handleArchivedExpandChange} variant="ghost" class="w-full mt-1">
-          <Collapsible.Trigger class="group/archived-trigger flex items-center gap-2 w-full px-2 py-1 rounded-md hover:bg-surface-raised-base-hover cursor-pointer">
-            <Icon
-              name="chevron-right"
-              size="small"
-              class="text-icon-weak transition-transform group-data-[expanded]/archived-trigger:rotate-90"
-            />
-            <Icon name="archive" size="small" class="text-icon-weak" />
-            <span class="text-11-medium text-text-weak flex-1 text-left">Archived</span>
-          </Collapsible.Trigger>
-          <Collapsible.Content class="pl-2">
-            <Show when={loadingArchived()}>
-              <div class="flex items-center justify-center py-2">
-                <Spinner class="size-4" />
-              </div>
-            </Show>
-            <Show when={!loadingArchived() && archivedSessions().length === 0}>
-              <div class="px-3 py-1.5 text-11-regular text-text-weak">No archived sessions</div>
-            </Show>
-            <Show when={!loadingArchived() && archivedSessions().length > 0}>
-              <div class="flex flex-col gap-1">
-                <For each={archivedSessions()}>
-                  {(session) => <SessionItem session={session} directory={props.directory} archived onArchive={handleArchiveChange} />}
-                </For>
-              </div>
-            </Show>
-          </Collapsible.Content>
-        </Collapsible>
-      </Collapsible.Content>
-    </Collapsible>
+          onClick={loadMoreSessions}
+        >
+          Load more
+        </Button>
+      </Show>
+    </Show>
   )
 }
 
@@ -355,8 +343,30 @@ export function ProjectSessionsPopover(props: Props) {
   const params = useParams()
   const [open, setOpen] = createSignal(false)
   const [confirmRemove, setConfirmRemove] = createSignal(false)
+  const [activeTab, setActiveTab] = createSignal<string>("main")
+  const [archiveRefreshKey, setArchiveRefreshKey] = createSignal(0)
   let contentRef: HTMLDivElement | undefined
   let triggerRef: HTMLDivElement | undefined
+
+  // Sync activeTab with current route directory when popover opens
+  createEffect(() => {
+    if (!open()) return
+    const currentDir = params.dir ? base64Decode(params.dir) : undefined
+    if (!currentDir) return
+    // Check if current directory belongs to this project
+    if (sameDirectory(currentDir, props.project.worktree)) {
+      setActiveTab("main")
+      return
+    }
+    // Check if current directory is one of this project's sandboxes
+    const sandboxes = props.project.sandboxes ?? []
+    for (const sandbox of sandboxes) {
+      if (sameDirectory(currentDir, sandbox)) {
+        setActiveTab(`worktree-${sandbox}`)
+        return
+      }
+    }
+  })
 
   const handleCloseProject = () => {
     if (!confirmRemove()) {
@@ -378,20 +388,41 @@ export function ProjectSessionsPopover(props: Props) {
     }
   }
 
-  const worktrees = createMemo(() => {
-    const main = { directory: props.project.worktree, label: "main", isMain: true }
-    const sandboxes = (props.project.sandboxes ?? [])
-      .filter((dir) => {
-        // Filter out worktrees that no longer exist (have no sessions)
-        const [store] = globalSync.child(dir)
-        return store.session.some((s) => sameDirectory(s.directory, dir))
-      })
-      .map((dir) => ({
+  const tabs = createMemo(() => {
+    const result: TabInfo[] = []
+    // Main worktree tab
+    result.push({
+      id: "main",
+      directory: props.project.worktree,
+      label: "main",
+      isArchived: false,
+    })
+    // Sandbox worktree tabs
+    const sandboxes = (props.project.sandboxes ?? []).filter((dir) => {
+      const [store] = globalSync.child(dir)
+      return store.session.some((s) => sameDirectory(s.directory, dir))
+    })
+    for (const dir of sandboxes) {
+      result.push({
+        id: `worktree-${dir}`,
         directory: dir,
         label: getFilename(dir),
-        isMain: false,
-      }))
-    return [main, ...sandboxes]
+        isArchived: false,
+      })
+    }
+    // Archived tab
+    result.push({
+      id: "archived",
+      directory: props.project.worktree,
+      label: "Archived",
+      isArchived: true,
+    })
+    return result
+  })
+
+  const currentTab = createMemo(() => {
+    const tab = tabs().find((t) => t.id === activeTab())
+    return tab ?? tabs()[0]
   })
 
   createEffect(() => {
@@ -409,6 +440,10 @@ export function ProjectSessionsPopover(props: Props) {
     onCleanup(() => document.removeEventListener("click", handleClickOutside))
   })
 
+  const handleArchiveChange = () => {
+    setArchiveRefreshKey((k) => k + 1)
+  }
+
   return (
     <Kobalte gutter={8} placement="top-start" open={open()} onOpenChange={setOpen}>
       <Kobalte.Trigger as="div" class="cursor-pointer" ref={triggerRef}>
@@ -416,34 +451,47 @@ export function ProjectSessionsPopover(props: Props) {
       </Kobalte.Trigger>
       <Kobalte.Portal>
         <Kobalte.Content ref={contentRef} class="z-50 w-80 rounded-lg border border-border-base bg-background-base shadow-lg p-3 animate-in fade-in-0 zoom-in-95">
-          <div class="flex items-center justify-between pb-2 border-b border-border-weak-base mb-2">
-            <div class="flex items-center gap-2">
-              <Icon name="history" size="small" class="text-icon-base" />
-              <span class="text-13-medium text-text-strong">Sessions</span>
+          {/* Tabs with actions */}
+          <div class="flex items-center gap-1 pb-2 mb-2 border-b border-border-weak-base">
+            <div class="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1">
+              <For each={tabs()}>
+                {(tab) => (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    class="px-2 py-1 rounded-md text-11-medium whitespace-nowrap transition-colors flex items-center"
+                    classList={{
+                      "bg-surface-raised-base-hover text-text-strong": activeTab() === tab.id,
+                      "text-text-weak hover:text-text-base hover:bg-surface-raised-base-hover": activeTab() !== tab.id,
+                    }}
+                  >
+                    <Show when={tab.isArchived} fallback={tab.label}>
+                      <Icon name="archive" class="text-icon-weak size-3" />
+                    </Show>
+                  </button>
+                )}
+              </For>
             </div>
-            <div class="flex items-center gap-1">
-              <Tooltip placement="top" value={confirmRemove() ? "Click again to confirm" : "Remove project from sidebar"}>
-                <IconButton
-                  icon="trash"
-                  variant="ghost"
-                  onClick={handleCloseProject}
-                  class={confirmRemove() ? "text-text-critical-base" : ""}
-                />
-              </Tooltip>
-              <Kobalte.CloseButton as={IconButton} icon="close" variant="ghost" />
-            </div>
+            <Tooltip placement="top" value={confirmRemove() ? "Click again to confirm" : "Remove project from sidebar"}>
+              <IconButton
+                icon="trash"
+                variant="ghost"
+                onClick={handleCloseProject}
+                class={confirmRemove() ? "text-text-critical-base" : ""}
+              />
+            </Tooltip>
           </div>
-          <div class="max-h-80 overflow-y-auto flex flex-col gap-1">
-            <For each={worktrees()}>
-              {(wt) => (
-                <WorktreeSection
-                  directory={wt.directory}
-                  label={wt.label}
-                  isMain={wt.isMain}
-                  project={props.project}
+          {/* Session list for current tab */}
+          <div class="max-h-72 overflow-y-auto no-scrollbar">
+            <Show when={currentTab()}>
+              {(tab) => (
+                <SessionsList
+                  directory={tab().directory}
+                  isArchived={tab().isArchived}
+                  onArchiveChange={handleArchiveChange}
                 />
               )}
-            </For>
+            </Show>
           </div>
         </Kobalte.Content>
       </Kobalte.Portal>
