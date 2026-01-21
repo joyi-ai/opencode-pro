@@ -429,6 +429,8 @@ function MultiPaneContent(props: MultiPanePageProps) {
     const isRoot = rootKey === normalized
     return { directory: project.worktree, worktree: isRoot ? undefined : directory }
   }
+  const isSameDirectory = (a: string | undefined, b: string | undefined) =>
+    normalizeDirectoryKey(a) === normalizeDirectoryKey(b)
 
   const focusedProject = createMemo(() => multiPane.focusedPane()?.directory)
   createEffect(
@@ -453,7 +455,7 @@ function MultiPaneContent(props: MultiPanePageProps) {
         if (!resolved.directory) continue
         const nextDirectory = resolved.directory
         const nextWorktree = resolved.worktree ?? pane.worktree
-        if (nextDirectory === pane.directory && nextWorktree === pane.worktree) continue
+        if (isSameDirectory(nextDirectory, pane.directory) && isSameDirectory(nextWorktree, pane.worktree)) continue
         multiPane.updatePane(pane.id, { directory: nextDirectory, worktree: nextWorktree })
       }
     })
