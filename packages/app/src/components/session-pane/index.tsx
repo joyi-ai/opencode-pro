@@ -701,43 +701,45 @@ export function SessionPane(props: SessionPaneProps) {
       </Show>
 
       {/* Header */}
-      <div
-        ref={setHeaderDragRef}
-        class="absolute top-0 left-0 right-0 z-40 transition-opacity duration-150"
-        classList={{
-          "opacity-100 pointer-events-auto": headerOverlay.showHeader() && sessionId() !== undefined,
-          "opacity-0 pointer-events-none": !headerOverlay.showHeader() || sessionId() === undefined,
-          "cursor-grab": !!paneDraggable,
-          "cursor-grabbing": paneDraggable?.isActiveDraggable,
-        }}
-        {...paneDragHandlers}
-        onMouseDown={(e) => {
-          // Allow right-click to bubble up to the pane grid so the radial dial
-          // can open even when the cursor is over the header overlay.
-          if (e.button === 2) return
-          e.stopPropagation()
-        }}
-        onMouseEnter={() => headerOverlay.setIsOverHeader(true)}
-        onMouseLeave={() => headerOverlay.setIsOverHeader(false)}
-        onFocusIn={() => headerOverlay.setHeaderHasFocus(true)}
-        onFocusOut={(e) => {
-          const relatedTarget = e.relatedTarget as HTMLElement | null
-          if (!e.currentTarget.contains(relatedTarget)) {
-            headerOverlay.setHeaderHasFocus(false)
-          }
-        }}
-      >
-        <SessionPaneHeader
-          paneId={props.paneId}
-          directory={props.directory}
-          projectDirectory={props.projectDirectory}
-          sessionId={sessionId()}
-          isFocused={isFocused}
-          onSessionChange={props.onSessionChange}
-          onDirectoryChange={props.onDirectoryChange}
-          onClose={props.onClose}
-        />
-      </div>
+      <Show when={hasMultiplePanes()}>
+        <div
+          ref={setHeaderDragRef}
+          class="absolute top-0 left-0 right-0 z-40 transition-opacity duration-150"
+          classList={{
+            "opacity-100 pointer-events-auto": headerOverlay.showHeader(),
+            "opacity-0 pointer-events-none": !headerOverlay.showHeader(),
+            "cursor-grab": !!paneDraggable,
+            "cursor-grabbing": paneDraggable?.isActiveDraggable,
+          }}
+          {...paneDragHandlers}
+          onMouseDown={(e) => {
+            // Allow right-click to bubble up to the pane grid so the radial dial
+            // can open even when the cursor is over the header overlay.
+            if (e.button === 2) return
+            e.stopPropagation()
+          }}
+          onMouseEnter={() => headerOverlay.setIsOverHeader(true)}
+          onMouseLeave={() => headerOverlay.setIsOverHeader(false)}
+          onFocusIn={() => headerOverlay.setHeaderHasFocus(true)}
+          onFocusOut={(e) => {
+            const relatedTarget = e.relatedTarget as HTMLElement | null
+            if (!e.currentTarget.contains(relatedTarget)) {
+              headerOverlay.setHeaderHasFocus(false)
+            }
+          }}
+        >
+          <SessionPaneHeader
+            paneId={props.paneId}
+            directory={props.directory}
+            projectDirectory={props.projectDirectory}
+            sessionId={sessionId()}
+            isFocused={isFocused}
+            onSessionChange={props.onSessionChange}
+            onDirectoryChange={props.onDirectoryChange}
+            onClose={props.onClose}
+          />
+        </div>
+      </Show>
 
       <div class="relative z-10 flex-1 min-h-0 flex flex-col">
         {/* Mobile view */}

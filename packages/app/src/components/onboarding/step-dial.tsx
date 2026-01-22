@@ -17,11 +17,11 @@ interface DialAction {
 
 const DIAL_ACTIONS: DialAction[] = [
   // All segments are equal size (90° each), rotated 45° clockwise
-  // Top: Expand, Right: New, Bottom: History, Left: Close
-  { action: "close", label: "Close", icon: "close", description: "Close current pane", startAngle: 180, endAngle: 270 },
-  { action: "expand", label: "Expand", icon: "expand", description: "Toggle maximize", startAngle: 270, endAngle: 360 },
+  // Top: Close, Right: New, Bottom: Expand, Left: History
+  { action: "close", label: "Close", icon: "close", description: "Close current pane", startAngle: 270, endAngle: 360 },
+  { action: "expand", label: "Expand", icon: "expand", description: "Toggle maximize", startAngle: 90, endAngle: 180 },
   { action: "new", label: "New", icon: "plus", description: "Create a new pane", startAngle: 0, endAngle: 90 },
-  { action: "history", label: "History", icon: "history", description: "Browse session history", startAngle: 90, endAngle: 180 },
+  { action: "history", label: "History", icon: "history", description: "Browse session history", startAngle: 180, endAngle: 270 },
 ]
 
 const INNER_RADIUS = 40

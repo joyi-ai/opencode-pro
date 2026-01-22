@@ -87,49 +87,49 @@ export function PaneHome(props: PaneHomeProps) {
       onMouseLeave={headerOverlay.handleMouseLeave}
       onMouseMove={headerOverlay.handleMouseMove}
     >
-      <div
-        ref={setHeaderDragRef}
-        class="absolute top-0 left-0 right-0 z-40 transition-opacity duration-150"
-        classList={{
-          "opacity-100 pointer-events-auto": false,
-          "opacity-0 pointer-events-none": true,
-          "cursor-grab": true,
-          "cursor-grabbing": paneDraggable.isActiveDraggable,
-        }}
-        {...paneDragHandlers}
-        onMouseDown={(event) => {
-          // Allow right-click to bubble up to the pane grid so the radial dial
-          // can open even when the cursor is over the header overlay.
-          if (event.button === 2) return
-          event.stopPropagation()
-        }}
-        onMouseEnter={() => headerOverlay.setIsOverHeader(true)}
-        onMouseLeave={() => headerOverlay.setIsOverHeader(false)}
-        onFocusIn={() => headerOverlay.setHeaderHasFocus(true)}
-        onFocusOut={(event) => {
-          const relatedTarget = event.relatedTarget as HTMLElement | null
-          if (!event.currentTarget.contains(relatedTarget)) {
-            headerOverlay.setHeaderHasFocus(false)
-          }
-        }}
-      >
-        <header
-          class="shrink-0 bg-background-stronger border-b flex flex-col"
+      <Show when={multiPane.panes().length > 1}>
+        <div
+          ref={setHeaderDragRef}
+          class="absolute top-0 left-0 right-0 z-40 transition-opacity duration-150"
           classList={{
-            "border-border-accent-base": props.isFocused(),
-            "border-border-weak-base": !props.isFocused(),
+            "opacity-100 pointer-events-auto": headerOverlay.showHeader(),
+            "opacity-0 pointer-events-none": !headerOverlay.showHeader(),
+            "cursor-grab": true,
+            "cursor-grabbing": paneDraggable.isActiveDraggable,
+          }}
+          {...paneDragHandlers}
+          onMouseDown={(event) => {
+            // Allow right-click to bubble up to the pane grid so the radial dial
+            // can open even when the cursor is over the header overlay.
+            if (event.button === 2) return
+            event.stopPropagation()
+          }}
+          onMouseEnter={() => headerOverlay.setIsOverHeader(true)}
+          onMouseLeave={() => headerOverlay.setIsOverHeader(false)}
+          onFocusIn={() => headerOverlay.setHeaderHasFocus(true)}
+          onFocusOut={(event) => {
+            const relatedTarget = event.relatedTarget as HTMLElement | null
+            if (!event.currentTarget.contains(relatedTarget)) {
+              headerOverlay.setHeaderHasFocus(false)
+            }
           }}
         >
-          <div class="h-8 flex items-center px-2 gap-1">
-            <div class="flex items-center min-w-0 flex-1 text-12-regular text-text-weak">New tab</div>
-            <Show when={multiPane.panes().length > 1}>
+          <header
+            class="shrink-0 bg-background-stronger border-b flex flex-col"
+            classList={{
+              "border-border-accent-base": props.isFocused(),
+              "border-border-weak-base": !props.isFocused(),
+            }}
+          >
+            <div class="h-8 flex items-center px-2 gap-1">
+              <div class="flex items-center min-w-0 flex-1 text-12-regular text-text-weak">New tab</div>
               <Tooltip value="Close pane">
                 <IconButton icon="close" variant="ghost" onClick={() => multiPane.removePane(props.paneId)} />
               </Tooltip>
-            </Show>
-          </div>
-        </header>
-      </div>
+            </div>
+          </header>
+        </div>
+      </Show>
       <Show when={showBorder()}>
         <div
           class="pointer-events-none absolute inset-0 z-30 border"

@@ -28,14 +28,14 @@ function angleToAction(angle: number): RadialDialAction {
 
   // Map 4 equal segments (90° each) to actions (0 degrees = top, clockwise)
   // Rotated 45° clockwise from corners to cardinal directions:
-  // Top: Expand (270-360)
+  // Top: Close (270-360)
   // Right: New (0-90)
-  // Bottom: History (90-180)
-  // Left: Close (180-270)
-  if (normalized >= 270) return "expand"
+  // Bottom: Expand (90-180)
+  // Left: History (180-270)
+  if (normalized >= 270) return "close"
   if (normalized < 90) return "new"
-  if (normalized < 180) return "history"
-  return "close"
+  if (normalized < 180) return "expand"
+  return "history"
 }
 
 export function useRadialDial(options: UseRadialDialOptions): UseRadialDialReturn {
