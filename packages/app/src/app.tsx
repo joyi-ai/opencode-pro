@@ -156,18 +156,16 @@ export function AppInterface(props: { defaultUrl?: string } = {}) {
                   <Route path="/" component={() => <Navigate href="session" />} />
                   <Route
                     path="/session/:id?"
-                    component={(route) => (
-                      <Show when={route.params.id ?? "new"} keyed>
-                        <TerminalProvider>
-                          <FileProvider>
-                            <PromptProvider>
-                              <Suspense fallback={<Loading />}>
-                                <Session />
-                              </Suspense>
-                            </PromptProvider>
-                          </FileProvider>
-                        </TerminalProvider>
-                      </Show>
+                    component={() => (
+                      <TerminalProvider>
+                        <FileProvider>
+                          <PromptProvider>
+                            <Suspense fallback={<Loading />}>
+                              <Session />
+                            </Suspense>
+                          </PromptProvider>
+                        </FileProvider>
+                      </TerminalProvider>
                     )}
                   />
                 </Route>
