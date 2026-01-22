@@ -91,8 +91,8 @@ export function PaneHome(props: PaneHomeProps) {
         ref={setHeaderDragRef}
         class="absolute top-0 left-0 right-0 z-40 transition-opacity duration-150"
         classList={{
-          "opacity-100 pointer-events-auto": headerOverlay.showHeader(),
-          "opacity-0 pointer-events-none": !headerOverlay.showHeader(),
+          "opacity-100 pointer-events-auto": false,
+          "opacity-0 pointer-events-none": true,
           "cursor-grab": true,
           "cursor-grabbing": paneDraggable.isActiveDraggable,
         }}
