@@ -102,13 +102,6 @@ export function Titlebar() {
       <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div id="opencode-titlebar-center" class="pointer-events-auto" data-tauri-no-drag />
       </div>
-      <Show when={windows()}>
-        <div
-          data-tauri-decorum-tb
-          class="absolute top-0 right-0 z-10 flex h-8 items-center"
-          data-tauri-no-drag
-        />
-      </Show>
     </header>
   )
 }

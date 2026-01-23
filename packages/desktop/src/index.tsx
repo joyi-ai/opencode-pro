@@ -398,7 +398,6 @@ function ServerGate(props: { children: (data: Accessor<ServerReadyData>) => JSX.
       fallback={
         <div class="h-screen w-screen flex flex-col items-center justify-center bg-background-base">
           <Splash class="w-12 h-12 opacity-50 animate-pulse" />
-          <div data-tauri-decorum-tb class="flex flex-row absolute top-0 right-0 z-10 h-8" />
         </div>
       }
     >
