@@ -79,7 +79,7 @@ export const Logo = (props: { class?: string }) => {
       classList={{ [props.class ?? ""]: !!props.class }}
     >
       <text x="117" y="32" text-anchor="middle" font-family="Inter, sans-serif" font-size="24" font-weight="200" letter-spacing="0.25">
-        <tspan fill="var(--icon-base)">Aura</tspan>
+        <tspan fill="var(--icon-strong-base)">Aura</tspan>
         <tspan fill="var(--icon-strong-base)"></tspan>
       </text>
     </svg>
